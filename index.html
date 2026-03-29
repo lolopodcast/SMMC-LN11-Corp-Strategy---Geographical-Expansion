@@ -162,24 +162,39 @@ const IntegrationResponsivenessLab = ({lang}) => {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
       <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'整合-回應架構模擬器':'Integration-Responsiveness Simulator'}</h4>
-      <div className="relative w-full" style={{paddingBottom:'100%',maxWidth:320,margin:'0 auto'}}>
-        <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full">
+      <div className="relative w-full aspect-square max-w-sm mx-auto mb-4">
+        <svg viewBox="-30 -10 250 240" className="absolute inset-0 w-full h-full overflow-visible">
           <rect x="0" y="0" width="200" height="200" fill="none" stroke="#cbd5e1" strokeWidth="1"/>
           <line x1="100" y1="0" x2="100" y2="200" stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4"/>
           <line x1="0" y1="100" x2="200" y2="100" stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4"/>
-          <text x="100" y="196" textAnchor="middle" fontSize="8" fill="#64748b">{lang==='zh'?'在地回應壓力 →':'Local Responsiveness →'}</text>
-          <text x="4" y="100" textAnchor="start" fontSize="8" fill="#64748b" transform="rotate(-90,4,100)">{lang==='zh'?'全球整合壓力 →':'Global Integration →'}</text>
-          {strategies.map((s,i)=><g key={i}><circle cx={s.x*2} cy={200-s.y*2} r="18" fill="#004030" opacity="0.12"/><text x={s.x*2} y={200-s.y*2+3} textAnchor="middle" fontSize="7" fill="#004030" fontWeight="bold">{s.name}</text></g>)}
-          <circle cx={cx*2} cy={200-cy*2} r="6" fill="#D8C3A5" stroke="#004030" strokeWidth="2"/>
+          
+          {/* X 軸文字 */}
+          <text x="100" y="220" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">{lang==='zh'?'在地回應壓力 →':'Local Responsiveness →'}</text>
+          
+          {/* Y 軸文字 (以 x=-15, y=100 為中心旋轉-90度) */}
+          <text x="-15" y="100" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500" transform="rotate(-90,-15,100)">{lang==='zh'?'全球整合壓力 →':'Global Integration →'}</text>
+          
+          {strategies.map((s,i)=><g key={i}>
+            <circle cx={s.x*2} cy={200-s.y*2} r="22" fill="#004030" opacity="0.12"/>
+            <text x={s.x*2} y={200-s.y*2+4} textAnchor="middle" fontSize="8" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{s.name}</text>
+          </g>)}
+          <circle cx={cx*2} cy={200-cy*2} r="7" fill="#D8C3A5" stroke="#004030" strokeWidth="2" className="transition-all duration-300"/>
         </svg>
       </div>
-      <div className="mt-4 space-y-2">
-        <label className="text-sm text-slate-600 dark:text-slate-400">{lang==='zh'?'在地回應':'Local Responsiveness'}: {cx}%</label>
-        <input type="range" min="0" max="100" value={cx} onChange={e=>setCx(+e.target.value)} className="w-full"/>
-        <label className="text-sm text-slate-600 dark:text-slate-400">{lang==='zh'?'全球整合':'Global Integration'}: {cy}%</label>
-        <input type="range" min="0" max="100" value={cy} onChange={e=>setCy(+e.target.value)} className="w-full"/>
+      <div className="mt-8 space-y-4">
+        <div>
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{lang==='zh'?'在地回應壓力 (Local Responsiveness)':'Local Responsiveness'}: {cx}%</label>
+          <input type="range" min="0" max="100" value={cx} onChange={e=>setCx(+e.target.value)} className="w-full mt-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{lang==='zh'?'全球整合壓力 (Global Integration)':'Global Integration'}: {cy}%</label>
+          <input type="range" min="0" max="100" value={cy} onChange={e=>setCy(+e.target.value)} className="w-full mt-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
+        </div>
       </div>
-      <p className="mt-3 text-sm font-bold text-[#004030] dark:text-[#D8C3A5]">{lang==='zh'?'最接近策略':'Closest Strategy'}: {closest.name}</p>
+      <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg text-center">
+        <span className="text-sm text-slate-500 dark:text-slate-400">{lang==='zh'?'最接近策略':'Closest Strategy'}: </span>
+        <span className="text-base font-bold text-[#004030] dark:text-[#D8C3A5]">{closest.name}</span>
+      </div>
     </div>
   );
 };
@@ -191,17 +206,19 @@ const EntryModeComparisonLab = ({lang}) => {
   const [selected, setSelected] = useState(0);
   const m = modes[selected];
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
       <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'進入模式比較器':'Entry Mode Comparator'}</h4>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {modes.map((md,i)=><button key={i} onClick={()=>setSelected(i)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selected===i?'bg-[#004030] text-white dark:bg-[#D8C3A5] dark:text-[#004030]':'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{md.name}</button>)}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {modes.map((md,i)=><button key={i} onClick={()=>setSelected(i)} className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex-1 text-center min-w-[70px] ${selected===i?'bg-[#004030] text-white dark:bg-[#D8C3A5] dark:text-[#004030] shadow-md':'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>{md.name}</button>)}
       </div>
-      {[{label:lang==='zh'?'控制程度':'Control',val:m.control},{label:lang==='zh'?'資源承諾':'Commitment',val:m.commit},{label:lang==='zh'?'風險程度':'Risk',val:m.risk}].map((bar,i)=>(
-        <div key={i} className="mb-3">
-          <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1"><span>{bar.label}</span><span>{bar.val}%</span></div>
-          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-[#004030] dark:bg-[#D8C3A5] rounded-full transition-all duration-500" style={{width:`${bar.val}%`}}/></div>
-        </div>
-      ))}
+      <div className="space-y-4">
+        {[{label:lang==='zh'?'控制程度':'Control',val:m.control},{label:lang==='zh'?'資源承諾':'Commitment',val:m.commit},{label:lang==='zh'?'風險程度':'Risk',val:m.risk}].map((bar,i)=>(
+          <div key={i}>
+            <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5"><span>{bar.label}</span><span>{bar.val}%</span></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-[#004030] dark:bg-[#D8C3A5] rounded-full transition-all duration-500 ease-out" style={{width:`${bar.val}%`}}/></div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -217,20 +234,26 @@ const DiamondModelLab = ({lang}) => {
   ];
   const path = `M${pts.map(p=>`${p.x},${p.y}`).join(' L')} Z`;
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
       <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'波特鑽石模型模擬器':'Porter Diamond Simulator'}</h4>
-      <svg viewBox="0 0 300 250" className="w-full max-w-xs mx-auto">
-        <polygon points="150,30 260,150 150,240 40,150" fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4"/>
-        <path d={path} fill="#004030" opacity="0.15" stroke="#004030" strokeWidth="2"/>
-        {pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="5" fill="#D8C3A5" stroke="#004030" strokeWidth="2"/>)}
-        <text x="150" y="20" textAnchor="middle" fontSize="9" fill="#004030" fontWeight="bold">{labels.rivalry}</text>
-        <text x="270" y="155" textAnchor="start" fontSize="9" fill="#004030" fontWeight="bold">{labels.demand}</text>
-        <text x="150" y="258" textAnchor="middle" fontSize="9" fill="#004030" fontWeight="bold">{labels.related}</text>
-        <text x="30" y="155" textAnchor="end" fontSize="9" fill="#004030" fontWeight="bold">{labels.factor}</text>
-      </svg>
-      <div className="mt-4 space-y-2">
+      <div className="relative w-full aspect-[4/3] max-w-sm mx-auto mb-4">
+        <svg viewBox="-20 -10 340 280" className="absolute inset-0 w-full h-full overflow-visible">
+          <polygon points="150,30 260,150 150,240 40,150" fill="none" stroke="#e2e8f0" strokeWidth="1.5" strokeDasharray="4"/>
+          <path d={path} fill="#004030" opacity="0.15" stroke="#004030" strokeWidth="2.5" className="transition-all duration-300"/>
+          {pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="6" fill="#D8C3A5" stroke="#004030" strokeWidth="2" className="transition-all duration-300"/>)}
+          
+          <text x="150" y="10" textAnchor="middle" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.rivalry}</text>
+          <text x="275" y="154" textAnchor="start" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.demand}</text>
+          <text x="150" y="265" textAnchor="middle" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.related}</text>
+          <text x="25" y="154" textAnchor="end" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.factor}</text>
+        </svg>
+      </div>
+      <div className="mt-6 space-y-3">
         {Object.entries(factors).map(([k,v])=>(
-          <div key={k}><label className="text-xs text-slate-600 dark:text-slate-400">{labels[k]}: {v}</label><input type="range" min="10" max="100" value={v} onChange={e=>setFactors(f=>({...f,[k]:+e.target.value}))} className="w-full"/></div>
+          <div key={k} className="flex items-center gap-3">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 w-24 shrink-0 truncate">{labels[k]}</label>
+            <input type="range" min="10" max="100" value={v} onChange={e=>setFactors(f=>({...f,[k]:+e.target.value}))} className="flex-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
+          </div>
         ))}
       </div>
     </div>
@@ -244,17 +267,23 @@ const GlobalValueChainLab = ({lang}) => {
   const [hover, setHover] = useState(-1);
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'全球價值鏈分布':'Global Value Chain Distribution'}</h4>
-      <div className="flex flex-wrap gap-2 justify-center">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'全球價值鏈分布':'Global Value Chain Distribution'}</h4>
+      <div className="flex flex-wrap gap-3 justify-center">
         {stages.map((s,i)=>(
           <div key={i} onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(-1)}
-            className={`flex-1 min-w-[100px] p-3 rounded-lg text-center cursor-pointer transition-all border ${hover===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5]':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
-            <div className="text-xs font-bold">{s.name}</div>
-            {hover===i && <><div className="text-[10px] mt-1 opacity-80">{s.loc}</div><div className="text-[10px] opacity-60">{lang==='zh'?'成本':'Cost'}: {s.cost}</div></>}
+            className={`flex-1 min-w-[110px] p-4 rounded-xl text-center cursor-pointer transition-all border shadow-sm ${hover===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5] transform scale-105':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-slate-300'}`}>
+            <div className="text-sm font-bold mb-1">{s.name}</div>
+            <div className={`text-xs mt-2 transition-opacity duration-300 ${hover===i?'opacity-90':'opacity-0 h-0 overflow-hidden'}`}>{s.loc}</div>
+            <div className={`text-xs mt-1 transition-opacity duration-300 ${hover===i?'opacity-70':'opacity-0 h-0 overflow-hidden'}`}>{lang==='zh'?'成本':'Cost'}: {s.cost}</div>
           </div>
         ))}
       </div>
-      {hover>=0 && <div className="mt-2 flex justify-center"><svg width="100%" height="8" className="max-w-xs"><rect x="0" y="3" width="100%" height="2" fill="#e2e8f0"/>{stages.map((_,i)=><circle key={i} cx={`${(i/(stages.length-1))*100}%`} cy="4" r={hover===i?"5":"3"} fill={hover===i?"#004030":"#D8C3A5"}/>)}</svg></div>}
+      <div className="mt-6 flex justify-center">
+        <svg width="100%" height="16" className="max-w-md overflow-visible">
+          <rect x="0" y="7" width="100%" height="2" fill="#e2e8f0" className="dark:fill-slate-600"/>
+          {stages.map((_,i)=><circle key={i} cx={`${(i/(stages.length-1))*100}%`} cy="8" r={hover===i?"8":"5"} fill={hover===i?"#004030":"#D8C3A5"} className="transition-all duration-300"/>)}
+        </svg>
+      </div>
     </div>
   );
 };
@@ -262,22 +291,22 @@ const GlobalValueChainLab = ({lang}) => {
 const InternationalSalesLab = ({lang}) => {
   const data = [{name:'Intel',pct:82},{name:'Caterpillar',pct:67},{name:'IBM',pct:64},{name:'Apple',pct:58},{name:'GE',pct:54},{name:'Boeing',pct:46},{name:'Starbucks',pct:30},{name:'Walmart',pct:24}];
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'國際營收佔比（互動圖表）':'International Revenue Share (Interactive Chart)'}</h4>
-      <div className="space-y-3">
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'國際營收佔比（互動圖表）':'International Revenue Share (Interactive Chart)'}</h4>
+      <div className="space-y-4">
         {data.map((d,i)=>(
           <div key={i} className="group">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold w-20 text-right text-slate-600 dark:text-slate-400">{d.name}</span>
-              <div className="flex-1 h-6 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold w-24 text-right text-slate-600 dark:text-slate-400 group-hover:text-[#004030] dark:group-hover:text-[#D8C3A5] transition-colors">{d.name}</span>
+              <div className="flex-1 h-7 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden relative shadow-inner">
                 <div className="h-full bg-[#D8C3A5] rounded-full transition-all duration-700 group-hover:bg-[#004030] dark:group-hover:bg-[#D8C3A5]" style={{width:`${d.pct}%`}}/>
-                <span className="absolute right-2 top-0 h-full flex items-center text-[10px] font-bold text-slate-600 dark:text-slate-400">{d.pct}%</span>
+                <span className="absolute right-3 top-0 h-full flex items-center text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-white dark:group-hover:text-[#004030] transition-colors">{d.pct}%</span>
               </div>
             </div>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 italic">{lang==='zh'?'滑鼠移至長條上方查看高亮效果':'Hover over bars for highlight'}</p>
+      <p className="mt-5 text-xs text-slate-500 dark:text-slate-400 italic text-center">{lang==='zh'?'滑鼠移至長條上方查看高亮效果':'Hover over bars for highlight'}</p>
     </div>
   );
 };
@@ -288,14 +317,14 @@ const CAGEDistanceLab = ({lang}) => {
     : [{name:'Cultural',icon:'🎭',examples:'Language, religion, norms'},{name:'Administrative',icon:'🏛️',examples:'Political ties, legal system'},{name:'Geographic',icon:'🌍',examples:'Physical distance, timezone'},{name:'Economic',icon:'💰',examples:'Income gap, resource cost'}];
   const [active, setActive] = useState(null);
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'CAGE 距離架構':'CAGE Distance Framework'}</h4>
-      <div className="grid grid-cols-2 gap-3">
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'CAGE 距離架構':'CAGE Distance Framework'}</h4>
+      <div className="grid grid-cols-2 gap-4 flex-1">
         {dims.map((d,i)=>(
-          <button key={i} onClick={()=>setActive(active===i?null:i)} className={`p-4 rounded-xl text-center transition-all border ${active===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5]':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
-            <div className="text-2xl mb-1">{d.icon}</div>
-            <div className="text-xs font-bold">{d.name}</div>
-            {active===i && <div className="text-[10px] mt-2 opacity-80">{d.examples}</div>}
+          <button key={i} onClick={()=>setActive(active===i?null:i)} className={`p-4 rounded-xl text-center transition-all border shadow-sm flex flex-col items-center justify-center ${active===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5] transform scale-[1.02]':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+            <div className="text-3xl mb-2">{d.icon}</div>
+            <div className="text-sm font-bold">{d.name}</div>
+            <div className={`text-xs mt-3 transition-all duration-300 ${active===i?'opacity-90 max-h-20':'opacity-0 max-h-0 overflow-hidden'}`}>{d.examples}</div>
           </button>
         ))}
       </div>
@@ -323,7 +352,7 @@ const dict = {
     analytics_name: "姓名", analytics_name_ph: "例：Jimmy Lo",
     analytics_export_csv: "匯出 CSV 歷程記錄",
     analytics_fill_required: "請填寫完整資訊以解鎖匯出",
-    group_options: ["G1","G2","G3","G4","G5","Others"],
+    group_options: ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
     analytics_total_time: "總學習時間", analytics_total_clicks: "總互動點擊",
     analytics_overall_acc: "總體測驗答對率",
     analytics_module: "模組", analytics_time: "停留時間",
@@ -493,7 +522,7 @@ const dict = {
       { title: "CAGE 距離架構", desc: "點擊探索文化、行政、地理、經濟四維度的國家距離" }
     ],
 
-    date: "Version 2026.03.27",
+    date: "Version 2026.03.29",
     copyright: "For Educational Use Only",
     architect_label: "Architect:",
     architect_name: "Prof. Shihmin Lo",
@@ -516,7 +545,7 @@ const dict = {
     analytics_name: "Name", analytics_name_ph: "e.g. Jimmy Lo",
     analytics_export_csv: "Export CSV Learning Record",
     analytics_fill_required: "Please fill in all fields to unlock export",
-    group_options: ["G1","G2","G3","G4","G5","Others"],
+    group_options: ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
     analytics_total_time: "Total Study Time", analytics_total_clicks: "Total Interactions",
     analytics_overall_acc: "Overall Quiz Accuracy",
     analytics_module: "Module", analytics_time: "Time Spent",
@@ -686,7 +715,7 @@ const dict = {
       { title: "CAGE Distance Framework", desc: "Click to explore Cultural, Administrative, Geographic, and Economic distance dimensions" }
     ],
 
-    date: "Version 2026.03.27",
+    date: "Version 2026.03.29",
     copyright: "For Educational Use Only",
     architect_label: "Architect:",
     architect_name: "Prof. Shihmin Lo",
@@ -858,14 +887,18 @@ function App() {
   const renderLab = () => (
     <div className="space-y-8 animate-fade-in">
       <H2 icon={modulesList[7].icon} number={7}>{t.mlab_title}</H2>
-      <p className="mt-4 text-slate-600 dark:text-slate-400">{t.mlab_desc}</p>
+      <p className="mt-4 text-slate-600 dark:text-slate-400 mb-8">{t.mlab_desc}</p>
+      
       <IntegrationResponsivenessLab lang={lang}/>
-      <div className="grid md:grid-cols-2 gap-6">
+      
+      <div className="grid md:grid-cols-2 gap-6 items-stretch">
         <EntryModeComparisonLab lang={lang}/>
         <DiamondModelLab lang={lang}/>
       </div>
+      
       <GlobalValueChainLab lang={lang}/>
-      <div className="grid md:grid-cols-2 gap-6">
+      
+      <div className="grid md:grid-cols-2 gap-6 items-stretch">
         <InternationalSalesLab lang={lang}/>
         <CAGEDistanceLab lang={lang}/>
       </div>

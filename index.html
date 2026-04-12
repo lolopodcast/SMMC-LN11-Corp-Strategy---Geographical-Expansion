@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Corp Strategy: Geographical Expansion | 集團策略：地理區域擴張</title>
+<title>Corporate Strategy: Geographical Expansion – 互動學習</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -26,47 +27,402 @@ tailwind.config = {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 .dark ::-webkit-scrollbar-thumb { background: #475569; }
-::selection { background: #004030; color: white; }
-.dark ::selection { background: #D8C3A5; color: #004030; }
+
+/* 版權提示彈窗動畫 */
+@keyframes popIn { 0% { opacity: 0; transform: translate(-50%, -40%); } 100% { opacity: 1; transform: translate(-50%, -50%); } }
+.copyright-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #004438; color: #E3B152; padding: 15px 30px; border-radius: 8px; font-family: 'Merriweather', serif; font-weight: bold; font-size: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 99999; pointer-events: none; animation: popIn 0.3s ease-out forwards; transition: opacity 0.3s ease-out; }
 </style>
+
+<!-- 前端防禦腳本 (SPA Skill Myself 0412a版規範) -->
+<script>
+  if (window.top !== window.self) { window.top.location = window.self.location; }
+  const allowedDomains = ['localhost', '127.0.0.1', 'lolopodcast.github.io', ''];
+  const hostname = window.location.hostname;
+  const isPreviewSandbox = hostname.includes('sandbox') || hostname.includes('preview') || hostname.includes('googleusercontent') || hostname.includes('cdpn.io');
+  if (!allowedDomains.includes(hostname) && !isPreviewSandbox) {
+    window.location.href = 'https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo';
+  }
+
+  function showCopyrightMsg() {
+    let modal = document.getElementById('copyright-msg-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'copyright-msg-modal';
+      modal.className = 'copyright-modal';
+      modal.innerText = 'Intellectual Property of Prof. Shihmin Lo';
+      document.body.appendChild(modal);
+    }
+    modal.style.animation = 'none';
+    modal.offsetHeight; 
+    modal.style.animation = 'popIn 0.3s ease-out forwards';
+    modal.style.opacity = '1';
+    
+    if(window.copyrightTimer) clearTimeout(window.copyrightTimer);
+    window.copyrightTimer = setTimeout(() => {
+      let currentModal = document.getElementById('copyright-msg-modal');
+      if(currentModal) {
+        currentModal.style.animation = 'none'; 
+        currentModal.style.opacity = '0';      
+        setTimeout(() => { if (currentModal.parentNode) currentModal.parentNode.removeChild(currentModal); }, 300);
+      }
+    }, 2000);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('dragstart', (e) => {
+      if (e.target.tagName.toLowerCase() === 'img' || e.target.tagName.toLowerCase() === 'svg') e.preventDefault();
+    });
+    document.addEventListener('contextmenu', (e) => {
+      const selection = window.getSelection().toString();
+      if (selection.length === 0 || e.target.tagName.toLowerCase() === 'img' || e.target.tagName.toLowerCase() === 'svg') {
+        e.preventDefault(); showCopyrightMsg();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F12') { e.preventDefault(); showCopyrightMsg(); }
+      if (e.ctrlKey && e.key.toLowerCase() === 'u') { e.preventDefault(); showCopyrightMsg(); }
+      if (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase())) { e.preventDefault(); showCopyrightMsg(); }
+    });
+  });
+</script>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef } = React;
 
-/* ─── Icons ─── */
-const IconBookOpen = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>;
-const IconAlertTriangle = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
-const IconCheckCircle = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-const IconGlobe = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>;
-const IconChevronRight = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"/></svg>;
-const IconChevronUp = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="18 15 12 9 6 15"/></svg>;
-const IconMenu = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
-const IconX = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const IconMoon = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>;
-const IconSun = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
-const IconPlay = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
-const IconPause = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
-const IconSquare = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>;
-const IconArrowRight = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
-const IconActivity = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
-const IconCpu = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>;
-const IconTrendingUp = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
-const IconLayers = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>;
-const IconFlag = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>;
-const IconZap = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
-const IconFlask = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 3h6v6l5 9H4l5-9V3z"/><line x1="8" y1="3" x2="16" y2="3"/></svg>;
-const IconZapLab = ({size=24,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/><circle cx="18" cy="5" r="3"/></svg>;
+/* ═══════ SVG ICONS ═══════ */
+const IconBookOpen = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+const IconGlobe = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
+const IconChevronRight = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"/></svg>;
+const IconChevronUp = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="18 15 12 9 6 15"/></svg>;
+const IconMenu = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
+const IconX = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IconMoon = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+const IconSun = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+const IconPlay = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+const IconPause = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
+const IconSquare = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>;
+const IconArrowRight = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+const IconActivity = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+const IconMapPin = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
+const IconNavigation = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>;
+const IconShare2 = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+const IconBriefcase = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
+const IconZapLab = ({size=24,className=""}) => <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/><circle cx="18" cy="18" r="4"/></svg>;
 
-/* ─── FlipCard ─── */
+/* ═══════ DICT ═══════ */
+const dict = {
+zh: {
+brand:"CS-GE",title:"集團策略：地理區域擴張",subtitle:"跨國經營、CAGE 距離與全球整合",
+nav_modules:"單元目錄",nav_prev:"上一單元",nav_next:"下一單元",
+key_terms:"關鍵專有名詞",flip_prompt:"點擊翻轉",audio_read:"語音導覽",
+quiz_title:"模組知識檢定（隨機 4 題）",
+submit:"提交答案",retry:"重新測驗",score:"得分",correct:"正確",incorrect:"錯誤",explanation:"解析",
+analytics_title:"學習歷程分析",analytics_desc:"追蹤你的學習時間、互動行為與測驗表現，匯出 CSV 歸檔。",
+analytics_form_title:"基本資料",analytics_group:"組別",analytics_dept:"系級",
+analytics_dept_ph:"例：IBS3",analytics_id:"學號",analytics_id_ph:"例：112212099",
+analytics_name:"姓名",analytics_name_ph:"例：Jimmy Lo",
+analytics_export_csv:"匯出 CSV 歷程記錄",analytics_fill_required:"請填寫完整資訊以解鎖匯出",
+group_options:["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
+analytics_total_time:"總學習時間",analytics_total_clicks:"總互動點擊",analytics_overall_acc:"總體測驗答對率",
+analytics_module:"模組",analytics_time:"停留時間",analytics_clicks:"點擊次數",analytics_acc:"答對率",
+analytics_correct_ans_total:"最新答對 / 最新填答 / 模組總題數",analytics_no_data:"尚未測驗",analytics_sec:"秒",analytics_times:"次",
+
+m0_nav:"0. 課程總覽",
+m0_title:"集團策略：地理區域擴張 (Geographical Expansion)",
+m0_intro:"企業成長的另一個維度是跨越國界的「地理區域擴張」。國際化不僅是進入新市場，更是為了獲取全球資源與套利機會。本模組探討企業為何走向國際、如何評估海外市場的「CAGE 距離」、選擇適當的市場進入模式，以及如何在全球整合與在地回應之間取得平衡。",
+m0_why:"為什麼要學習地理區域擴張？",
+m0_why_desc:"當國內市場飽和，企業必須走向世界。但國際化伴隨著「外來者劣勢 (Liability of Foreignness)」。了解如何克服文化與制度差異、選擇低風險的進入策略（如授權或合資），以及建構跨國型組織，是現代高階經理人的必修課。",
+m0_modules:[
+  {num:"01",title:"國家競爭優勢與國際化動機",desc:"尋求市場/資源/效率、Porter 國家鑽石模型"},
+  {num:"02",title:"評估海外市場：CAGE 距離",desc:"文化、行政/政治、地理與經濟距離的影響"},
+  {num:"03",title:"進入模式的選擇",desc:"出口、授權/加盟、合資、100% 子公司 (風險與控制的權衡)"},
+  {num:"04",title:"全球策略與組織",desc:"I-R 架構 (全球化 vs 多國本土化)、Ghemawat 的 AAA 三角策略"}
+],
+m0_stats:[
+  {val:"CAGE",label:"四大距離評估"},
+  {val:"Diamond",label:"Porter 國家優勢"},
+  {val:"I-R",label:"整合-回應矩陣"},
+  {val:"4",label:"學習模組"}
+],
+m0_start:"開始學習 →",
+
+m1_nav:"1. 動機與優勢",m1_title:"國家競爭優勢與國際化動機",
+m1_p1:"企業走向國際化的傳統動機是尋求市場 (Market-seeking) 與尋求資源 (Resource-seeking)。然而，在現代全球化經濟中，尋求效率 (Efficiency-seeking，如全球供應鏈分工) 與尋求策略性資產 (Strategic asset-seeking，如併購矽谷的 AI 新創以獲取技術) 變得同等重要。",
+m1_p2:"「為何某些國家的企業在特定產業中特別具有全球競爭力？這並非偶然，而是由該國的國家環境所孕育。」—— Michael Porter",
+m1_p3:"為了探討國家環境如何賦予企業優勢，Michael Porter 提出了「國家鑽石模型」(National Diamond Model)。該模型包含四個相互作用的要素：(1) 要素條件 (Factor conditions)：如特定領域的高階人才或基礎設施；(2) 需求條件 (Demand conditions)：國內市場客戶越挑剔，越能逼迫企業創新；(3) 相關與支援產業 (Related and supporting industries)：強大的產業聚落能提供創新協同效應；(4) 企業策略、結構與競爭對手 (Firm strategy, structure, and rivalry)：國內競爭越激烈，企業在國際上越強悍。",
+m1_p4:"企業的跨國擴張，本質上是將其在母國孕育的「所有權優勢」(Ownership advantages，如專利、品牌) 結合地主國的「區位優勢」(Location advantages，如廉價勞力、龐大市場)，以創造超越本土競爭對手的價值。",
+m1_cards:[
+  {title:"尋求市場 (Market-seeking)",desc:"當國內市場飽和或規模太小，企業必須將產品推向海外以分攤龐大的研發或固定成本。例如瑞士的雀巢 (Nestlé) 高度依賴海外市場。"},
+  {title:"尋求效率 (Efficiency-seeking)",desc:"企業將價值鏈的不同環節配置在全球成本最低或效率最高的地方。例如 Apple 將設計留在加州，將組裝移至中國或印度。"},
+  {title:"Porter 的「需求條件」",desc:"日本消費者對電子產品極度挑剔且喜愛微型化，這種苛刻的國內需求，迫使 Sony 和 Panasonic 開發出領先全球的微型電子技術。"},
+  {title:"國內競爭的鍛鍊",desc:"德國汽車產業（賓士、BMW、Audi、福斯）在國內廝殺慘烈，這種殘酷的「內部競爭」反而鍛鍊出他們稱霸全球的競爭力。"}
+],
+m1_terms:[
+  {front:"Liability of Foreignness\n外來者劣勢",back:"跨國企業在海外市場所面臨的額外成本與不利益，源自於對當地文化、法規的不熟悉，以及地主國消費者的排外心理。"},
+  {front:"National Diamond Model\n國家鑽石模型",back:"Porter 提出解釋國家競爭優勢的理論框架，強調要素、需求、支援產業與國內競爭四者的互動。"},
+  {front:"Location Advantages\n區位優勢",back:"特定國家或地區所獨有，能降低生產成本或增加產品價值的優勢，如自然資源、廉價勞力或優惠稅率。"}
+],
+m1_q:[
+  {q:"企業併購矽谷的 AI 新創公司，主要屬於哪一種國際化動機？",opts:["尋求市場 (Market-seeking)","尋求資源 (Resource-seeking)","尋求效率 (Efficiency-seeking)","尋求策略性資產 (Strategic asset-seeking)"],ans:3,exp:"為了獲取先進技術、品牌或特定組織能力而進行的跨國投資，屬於尋求策略性資產。"},
+  {q:"根據 Porter 的國家鑽石模型，下列何者是提升企業國際競爭力的正面因素？",opts:["政府完全保護企業免受競爭","國內消費者非常挑剔且要求極高","國內缺乏相關供應商","國內資源極度匱乏"],ans:1,exp:"挑剔的國內客戶（需求條件）會逼迫企業不斷創新與提升品質，從而在國際上具備強大競爭力。"},
+  {q:"「外來者劣勢」(Liability of Foreignness) 是指跨國企業：",opts:["在國外面臨比當地企業更高的營運與適應成本","因為是外國企業所以不用繳稅","外語能力較差","在母國被歧視"],ans:0,exp:"外國企業不熟悉地主國的法規、文化、通路網絡，因此會產生額外的學習與適應成本。"},
+  {q:"德國汽車產業擁有強大的零組件供應商聚落（如 Bosch, Continental），這對應了國家鑽石模型的哪個要素？",opts:["要素條件","需求條件","相關與支援產業","國內競爭"],ans:2,exp:"強大的上下游供應商（相關與支援產業）能提供創新與高品質的零組件，強化核心產業的競爭力。"},
+  {q:"Nike 將鞋類製造轉移至亞洲國家，主要動機是？",opts:["尋求市場","尋求效率 (追求最低成本區位)","尋求策略性資產","政府強迫"],ans:1,exp:"將勞力密集的價值鏈環節移至工資較低的國家，是典型的尋求效率動機。"},
+  {q:"「所有權優勢」(Ownership advantages) 指的是：",opts:["企業擁有國外的土地","企業擁有獨特的專利、品牌或管理技術，使其能克服外來者劣勢","政府給予的特權","企業股票完全被內部人持有"],ans:1,exp:"所有權優勢是跨國企業賴以在海外競爭的核心武器，用以抵銷不熟悉當地市場的劣勢。"},
+  {q:"在 Porter 的鑽石模型中，國內競爭的激烈程度對企業有何影響？",opts:["會削弱企業的國際競爭力","會迫使企業持續改善與創新，進而強化國際競爭力","會導致企業破產","沒有影響"],ans:1,exp:"殘酷的國內競爭是企業最強的鍛鍊場，能在國內存活的企業通常在國際上也非常強悍。"},
+  {q:"如果一個國家的基礎設施落後，但政府大量投資培育特定領域的高階工程師，這屬於改善鑽石模型中的哪一項？",opts:["需求條件","初階要素條件","進階要素條件 (Advanced Factor Conditions)","相關產業"],ans:2,exp:"Porter 強調，像高階人才與科研機構這類「進階且專業化的要素條件」，比天然資源更具策略重要性。"}
+],
+
+m2_nav:"2. 評估海外市場",m2_title:"評估海外市場：CAGE 距離架構",
+m2_p1:"企業在評估海外市場時，往往過度依賴「GDP 規模」或「人口數」等硬性經濟指標，而忽略了跨國經營的真實摩擦力。Pankaj Ghemawat 指出，距離不僅僅是地理上的，更包含了多重維度。",
+m2_p2:"「距離依然存在。我們沒有進入一個無國界的世界。忽視距離的企業，終將在海外市場付出慘痛代價。」—— Pankaj Ghemawat",
+m2_p3:"Ghemawat 提出了「CAGE 距離架構」(CAGE Distance Framework) 來全面評估雙邊市場的差異：(1) 文化距離 (Cultural Distance)：語言、宗教、價值觀與社會規範的差異。(2) 行政/政治距離 (Administrative/Political Distance)：缺乏殖民歷史連結、無共同貨幣、政治敵對或保護主義法規。(3) 地理距離 (Geographic Distance)：實體距離、缺乏共同邊界、無直航或氣候差異。(4) 經濟距離 (Economic Distance)：人均收入、基礎設施品質與人力資源成本的落差。",
+m2_p4:"不同的產業對不同維度的距離敏感度各異。例如：食品業與傳媒業對「文化距離」極度敏感；受高度管制的產業（如航太、國防、電信）對「行政/政治距離」極度敏感；易腐爛或低價值/高重量的產品（如水泥、玻璃）對「地理距離」極度敏感；而勞力密集產業則最關注「經濟距離」。",
+m2_cards:[
+  {title:"文化距離 (Cultural)",desc:"Google 與 eBay 等美國網路巨頭在中國與日本市場受挫，很大程度上是因為無法適應當地獨特的文化習慣、使用者介面偏好與社會關係網絡。"},
+  {title:"行政/政治距離 (Administrative)",desc:"為何西班牙最大的電信商 Telefonica 主要向拉丁美洲擴張？因為雙方享有共同的語言與相似的行政體系（前殖民地連結），大幅降低了政治與法規風險。"},
+  {title:"地理距離 (Geographic)",desc:"地理距離不僅是公里數，還包含基礎設施的連結。例如加拿大與美國因為地理相連且基礎設施高度整合，兩國間的貿易量極大。"},
+  {title:"經濟距離 (Economic)",desc:"Walmart 在開發中國家擴張時經常遇到困難，因為其依賴強大 IT 基礎設施與高效率物流的商業模式（適合高經濟發展國家），在基礎設施落後的國家難以發揮。"}
+],
+m2_terms:[
+  {front:"CAGE Framework\nCAGE 距離架構",back:"Ghemawat 提出的框架，透過文化、行政、地理、經濟四個維度，衡量兩國之間的差異與跨國經營的摩擦力。"},
+  {front:"Cultural Distance\n文化距離",back:"兩國在語言、宗教、社會規範與消費者偏好上的差異。對具有文化意涵的產品（如食品、娛樂）影響最大。"},
+  {front:"Psychic Distance\n心理距離",back:"決策者主觀感知上的市場差異。有時實體距離不遠，但心理距離極大，導致決策者嚴重誤判市場。"}
+],
+m2_q:[
+  {q:"Ghemawat 的 CAGE 架構中，'C' 代表什麼？",opts:["Capital (資本)","Cost (成本)","Cultural (文化)","Communication (通訊)"],ans:2,exp:"CAGE 代表 Cultural (文化), Administrative (行政), Geographic (地理), Economic (經濟)。"},
+  {q:"對於「水泥」或「玻璃」這類低價值但重量極大的產品，哪一種 CAGE 距離對其影響最致命？",opts:["文化距離","行政距離","地理距離","經濟距離"],ans:2,exp:"重量大、體積大且價值低的產品，其運輸成本極高，因此對「實體地理距離」最為敏感。"},
+  {q:"英國企業向澳洲擴張的阻力，遠小於向地理位置更近的法國擴張。這最能用 CAGE 中的哪兩個維度來解釋？",opts:["地理與經濟距離","文化與行政距離 (同文同種與大英國協的制度連結)","氣候與時區差異","成本與利潤"],ans:1,exp:"英澳享有共同語言與相似的法律體系（文化與行政距離極短），抵銷了實體地理距離的遙遠。"},
+  {q:"跨國企業在發展中國家常面臨腐敗、繁瑣的法規與外資限制，這反映了哪一種距離？",opts:["文化距離","行政/政治距離","地理距離","經濟距離"],ans:1,exp:"政府法規、制度透明度、政治敵意等體制上的差異，皆屬於行政/政治距離 (Administrative Distance)。"},
+  {q:"在 CAGE 架構中，如果兩國存在殖民歷史連結（如葡萄牙與墨西哥），會產生什麼影響？",opts:["增加經濟距離","縮短行政與文化距離，促進雙邊貿易","沒有任何影響","增加地理距離"],ans:1,exp:"殖民歷史通常會留下共同的語言、相似的法律體系與文化習慣，大幅降低跨國交易的摩擦成本。"},
+  {q:"麥當勞在印度市場推出「無牛肉、無豬肉」的素食漢堡，主要是為了解決哪一種距離帶來的挑戰？",opts:["文化距離 (宗教與飲食禁忌)","行政距離","地理距離","經濟距離"],ans:0,exp:"飲食習慣深受當地宗教與社會價值觀影響，這是最典型的文化距離挑戰。"},
+  {q:"企業為何容易陷入「忽略 CAGE 距離」的陷阱？",opts:["因為他們討厭看地圖","因為他們過度專注於市場規模 (如 GDP、人口數)，而低估了隱性的制度與文化摩擦成本","因為當地政府禁止分析","因為 CAGE 架構太複雜"],ans:1,exp:"許多企業只看到「中國有 14 億人口」或「印度市場很大」，卻忽視了當地複雜的政經與文化差異，導致投資慘敗。"},
+  {q:"勞力密集的成衣製造業，在跨國供應鏈佈局時，最關注的是哪一種距離（以尋求最低勞工成本）？",opts:["文化距離","行政距離","地理距離","經濟距離 (人均收入與工資的落差)"],ans:3,exp:"尋求效率的產業最關注經濟距離，即兩國在工資水平、要素成本上的巨大落差。"}
+],
+
+m3_nav:"3. 進入模式",m3_title:"進入模式的選擇 (Modes of Entry)",
+m3_p1:"決定進入海外市場後，企業必須選擇「進入模式」(Modes of Entry)。這本質上是在「資源承諾/風險」與「控制程度」之間進行權衡 (Trade-off)。",
+m3_p2:"光譜的最左端是出口 (Exporting) 與授權 (Licensing) / 加盟 (Franchising)。這些模式投入資金少、風險低，但也缺乏對當地市場的控制權，且可能面臨代理問題或技術外流。例如授權商可能為了自身短期利益，損害了母公司的品牌聲譽。",
+m3_p3:"光譜的中間是合資 (Joint Ventures, JV) 與策略聯盟 (Strategic Alliances)。企業與當地夥伴共享風險與利潤，這能快速獲取當地知識與通路，或滿足當地政府的外資限制法規。但缺點是可能產生決策僵局，或是在合作過程中被夥伴「掏空」核心技術。",
+m3_p4:"光譜的最右端是 100% 持股的獨資子公司 (Wholly Owned Subsidiaries)。企業享有絕對的控制權，能保護核心專利，並整合全球策略。然而，獨資伴隨著最高的資本投入與風險。獨資可分為兩種路徑：綠地投資 (Greenfield Investment，從零開始建廠，進度慢但文化純粹) 與跨國併購 (Acquisition，快速取得現成市佔與資產，但整合困難)。",
+m3_cards:[
+  {title:"出口 (Exporting)",desc:"最安全的試水溫方式。避免了在當地設立工廠的固定成本，但面臨高昂運輸成本、關稅障礙，且難以即時回應當地客戶需求。"},
+  {title:"授權 (Licensing)",desc:"將無形資產（專利、商標）授權給國外廠商生產。優點是無風險獲取權利金；致命缺點是可能培養出未來的競爭對手。"},
+  {title:"合資 (Joint Ventures)",desc:"在中國市場極為常見，因為政府常規定外資必須與本土企業合資（如早期的汽車業）。這降低了政治風險並能利用本土網絡。"},
+  {title:"綠地 vs. 併購",desc:"綠地投資 (Greenfield) 就像自己生小孩，雖然慢，但不會有排斥反應；併購 (Acquisition) 就像領養，立刻有即戰力，但可能面臨嚴重的組織文化衝突。"}
+],
+m3_terms:[
+  {front:"Foreign Direct Investment (FDI)\n外人直接投資",back:"企業跨越國界，對海外的實體資產或企業進行具有實質控制權的投資（包含合資與獨資子公司）。"},
+  {front:"Greenfield Investment\n綠地投資",back:"FDI 的一種形式。企業在海外從購買土地開始，完全從零建立新的營運設施。"},
+  {front:"Wholly Owned Subsidiary\n獨資子公司",back:"企業擁有 100% 股權的海外分支機構，承擔最高風險，但也享有最完整的控制權與技術保護。"}
+],
+m3_q:[
+  {q:"企業在選擇海外市場進入模式時，最核心的權衡 (Trade-off) 是什麼？",opts:["產品價格與數量的權衡","「資源承諾/風險」與「控制程度」的權衡","員工薪資與工時的權衡","廣告預算與利潤的權衡"],ans:1,exp:"高控制權（如獨資）必然伴隨高資本投入與高風險；低風險模式（如出口）則必然缺乏對海外市場的控制力。"},
+  {q:"下列哪一種進入模式的「資源承諾最小」且「風險最低」？",opts:["獨資子公司 (Wholly Owned Subsidiary)","合資 (Joint Venture)","出口 (Exporting)","綠地投資 (Greenfield)"],ans:2,exp:"出口不需要在海外投資建廠或建立龐大的銷售團隊，是風險最低的進入方式。"},
+  {q:"「授權」(Licensing) 作為市場進入模式，最大的隱憂是什麼？",opts:["運輸成本太高","可能導致核心技術外流，不經意間培養出未來的競爭對手","需要投入極高的資本建廠","受限於關稅障礙"],ans:1,exp:"被授權方學會技術後，若合約結束或違約，可能直接成為母公司的強勁對手。"},
+  {q:"為何許多跨國企業進入中國或印度等新興市場時，常選擇「合資」(Joint Venture)？",opts:["因為合資可以獲得 100% 控制權","為了獲取當地夥伴的政商關係、通路網絡，或滿足當地政府的外資限制法規","因為不需要分享利潤","因為這樣可以避免繳稅"],ans:1,exp:"合資能有效克服外來者劣勢，並符合部分發展中國家對外資持股比例的法規限制。"},
+  {q:"企業在海外「從零開始購買土地、建造工廠並招募員工」，這屬於哪一種投資方式？",opts:["跨國併購 (Acquisition)","綠地投資 (Greenfield Investment)","間接出口","授權"],ans:1,exp:"Greenfield 意指在「未開發的綠地」上從頭建起，進度較慢，但能完全按母公司標準建立文化與流程。"},
+  {q:"相較於綠地投資，「跨國併購」(Acquisition) 的最大優點是什麼？",opts:["完全沒有組織文化衝突","能極快速地取得當地的市佔率、品牌與現成資產","不需要花費任何資金","政府絕對不會審查"],ans:1,exp:"併購能立刻買下時間與市佔，但後續的文化整合與人員留任往往是最大的挑戰。"},
+  {q:"若一家科技公司擁有極度機密且容易被偷竊的核心技術，它應該選擇哪種進入模式？",opts:["廣泛授權給當地廠商","100% 獨資子公司 (Wholly Owned Subsidiary)","少數股權合資","間接出口"],ans:1,exp:"當技術外溢風險極高時，企業必須選擇獨資以保持絕對控制權，防止技術被外部合作夥伴竊取。"},
+  {q:"企業將商標、SOP 與行銷資源授權給海外獨立店長經營，這是哪種模式？",opts:["合資","綠地投資","加盟 (Franchising)","外人直接投資"],ans:2,exp:"加盟常見於服務業（如速食店、飯店），加盟主出資經營，母公司收取權利金並進行品質控管。"}
+],
+
+m4_nav:"4. 全球策略與組織",m4_title:"全球策略與組織：I-R 架構與 AAA 三角",
+m4_p1:"跨國企業在進行全球營運時，面臨兩股相互拉扯的力量：(1) 降低成本的需求，驅使企業追求「全球整合」(Global Integration) 與標準化規模經濟；(2) 滿足各地差異的需求，驅使企業追求「在地回應」(Local Responsiveness) 與客製化。這構成了 Bartlett & Ghoshal 著名的「整合-回應架構」(I-R Framework)。",
+m4_p2:"依據這兩股力量的強弱，跨國策略可分為四種：(1) 國際策略 (International)：將母國的核心能力/產品直接轉移至海外（低整合、低回應）。(2) 多國本土化策略 (Multidomestic)：賦予各地分公司極大自主權，高度客製化產品以迎合當地市場（低整合、高回應）。(3) 全球化策略 (Global)：將全球視為單一市場，推出標準化產品以追求極致成本效率（高整合、低回應）。(4) 跨國型策略 (Transnational)：同時追求全球效率與在地回應，透過複雜的全球網絡共享知識（高整合、高回應）。",
+m4_p3:"此外，Pankaj Ghemawat 提出了「AAA 三角策略」(AAA Triangle)：企業在跨國擴張時，可選擇 Adaptation (調適，即在地回應)、Aggregation (聚合，即全球規模經濟)、或 Arbitrage (套利，利用各國要素成本差異，如在印度設客服中心)。",
+m4_p4:"「多數企業沒有足夠的管理頻寬同時執行三個 A。專注於一個或兩個 A，並在組織結構上予以支持，才是致勝之道。」—— Ghemawat",
+m4_cards:[
+  {title:"多國本土化 (Multidomestic)",desc:"如早期的聯合利華 (Unilever) 或 MTV。各地區分公司就像獨立的小國王，產品配方、行銷完全在地化。缺點是成本高昂，且難以發揮全球規模經濟。"},
+  {title:"全球化策略 (Global)",desc:"如 Intel 或波音 (Boeing)。微處理器或客機在全球各地的需求幾乎一致。企業在成本最低處集中生產，向全球銷售標準化產品。"},
+  {title:"跨國型策略 (Transnational)",desc:"被視為跨國企業的聖杯。既要有全球化的低成本，又要有本土化的彈性。如 Caterpillar 研發共用引擎核心，但依據各國地形與法規微調外部配備。"},
+  {title:"套利 (Arbitrage)",desc:"利用國與國之間的差異（而非克服差異）來獲利。最典型的是「勞動力套利」，如將客服設在菲律賓或將軟體開發設在印度。"}
+],
+m4_terms:[
+  {front:"Integration-Responsiveness Framework\nI-R 架構",back:"分析跨國企業如何在「全球整合（追求規模經濟）」與「在地回應（滿足各國差異）」這兩股力量間取得平衡的矩陣。"},
+  {front:"Transnational Strategy\n跨國型策略",back:"I-R 矩陣中最複雜的策略，試圖同時最大化全球效率、在地適應力與跨國知識學習。通常採用矩陣式組織結構。"},
+  {front:"AAA Triangle\nAAA 三角策略",back:"Ghemawat 提出的跨國策略框架：Adaptation (調適/在地化)、Aggregation (聚合/規模化)、Arbitrage (套利/利用差異)。"}
+],
+m4_q:[
+  {q:"在 I-R 架構中，促使企業追求「全球整合」(Global Integration) 的主要驅動力為何？",opts:["消費者偏好的巨大差異","地主國政府的要求","追求規模經濟與降低成本的壓力","希望增加管理的複雜度"],ans:2,exp:"面對激烈的價格競爭，企業必須透過標準化生產與集中研發來降低全球總成本。"},
+  {q:"企業賦予各地海外分公司極大的決策自主權，讓他們根據當地口味大幅修改產品。這屬於哪種策略？",opts:["多國本土化策略 (Multidomestic Strategy)","全球化策略 (Global Strategy)","國際策略 (International Strategy)","套利策略 (Arbitrage)"],ans:0,exp:"多國本土化策略（高在地回應、低全球整合）將各國視為獨立市場，分公司猶如當地企業。"},
+  {q:"「全球化策略」(Global Strategy) 的典型特徵為何？",opts:["每個國家賣完全不同的產品","將全球視為單一市場，集中生產標準化產品以追求極致的成本效率","將總部遷往海外","完全依賴當地經銷商"],ans:1,exp:"如民航機或半導體產業，各國需求同質性高，企業在成本最低的少數據點生產全球統一標準的產品。"},
+  {q:"跨國型策略 (Transnational Strategy) 被認為是最難執行的，原因為何？",opts:["因為它不需要任何資源","因為它試圖同時達成「高全球整合」與「高在地回應」這兩個互相矛盾的目標","因為它被國際法禁止","因為它只適用於單一國家"],ans:1,exp:"同時追求標準化（降成本）與客製化（滿足差異），需要極為複雜的矩陣型組織與跨國知識分享網路。"},
+  {q:"Ghemawat 的 AAA 三角中，企業利用各國工資或稅率的落差來獲利（如將客服移至印度），屬於哪一個 A？",opts:["Adaptation (調適)","Aggregation (聚合)","Arbitrage (套利)","Alliance (聯盟)"],ans:2,exp:"Arbitrage (套利) 的核心思想是「利用」國與國之間的經濟或法規差異來創造優勢，而非「克服」差異。"},
+  {q:"如果產業的特性是「各國消費者需求差異極小，但價格競爭極度激烈」，企業應採取何種策略？",opts:["多國本土化策略","全球化策略 (Global Strategy)","完全撤出國際市場","只在母國生產並提高價格"],ans:1,exp:"需求差異小代表不需要高「在地回應」；價格競爭激烈代表需要高「全球整合」以壓低成本。此為標準的全球化策略情境。"},
+  {q:"在 AAA 策略中，克服「文化距離」最常使用的是哪一個策略？",opts:["Adaptation (調適)","Aggregation (聚合)","Arbitrage (套利)","以上皆非"],ans:0,exp:"Adaptation (調適) 就是透過產品或行銷的在地化修改，來適應並克服各國文化與法規上的差異。"},
+  {q:"早期美國企業將產品在國內研發與生產，然後直接賣到國外，完全不考慮修改產品或海外生產。這屬於 I-R 矩陣中的哪種策略？",opts:["國際策略 (International Strategy)","跨國型策略 (Transnational Strategy)","多國本土化策略","全球化策略"],ans:0,exp:"國際策略（低整合、低回應）僅僅是將母國的產品與創新，簡單地轉移至缺乏此技術的海外市場。"}
+],
+
+m6_nav:"6. 外部資源",m6_title:"延伸學習資源",m6_desc:"精選國際企業與全球策略領域的經典文獻與實務洞察，供進一步探索。",
+mlab_nav:"7. 互動實驗室",mlab_title:"互動實驗室",mlab_desc:"透過視覺化模擬器，親自操作並體驗 CAGE 距離、進入模式權衡與 I-R 矩陣決策。",
+date:"Version 2026.04.12",copyright:"For Educational Use Only",
+architect_label:"Architect:",architect_name:"Prof. Shihmin Lo",
+architect_url:"https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+},
+en: {
+brand:"CS-GE",title:"Corporate Strategy: Geographical Expansion",subtitle:"Global Operations, CAGE Distance & Integration",
+nav_modules:"Module Menu",nav_prev:"Previous",nav_next:"Next",
+key_terms:"Key Terms",flip_prompt:"Click to flip",audio_read:"Audio Guide",
+quiz_title:"Module Quiz (Random 4 Questions)",
+submit:"Submit",retry:"Retry",score:"Score",correct:"Correct",incorrect:"Incorrect",explanation:"Explanation",
+analytics_title:"Learning Analytics",analytics_desc:"Track your learning time, interactions, and quiz performance. Export CSV for your records.",
+analytics_form_title:"Personal Info",analytics_group:"Group",analytics_dept:"Department",
+analytics_dept_ph:"e.g., IBS3",analytics_id:"Student ID",analytics_id_ph:"e.g., 112212099",
+analytics_name:"Name",analytics_name_ph:"e.g., Jimmy Lo",
+analytics_export_csv:"Export CSV Record",analytics_fill_required:"Please fill in all fields to unlock export",
+group_options:["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
+analytics_total_time:"Total Learning Time",analytics_total_clicks:"Total Interactions",analytics_overall_acc:"Overall Quiz Accuracy",
+analytics_module:"Module",analytics_time:"Time Spent",analytics_clicks:"Clicks",analytics_acc:"Accuracy",
+analytics_correct_ans_total:"Latest Correct / Latest Answered / Total Pool",analytics_no_data:"Not yet taken",analytics_sec:"sec",analytics_times:"times",
+
+m0_nav:"0. Overview",
+m0_title:"Corporate Strategy: Geographical Expansion",
+m0_intro:"Another dimension of corporate growth is 'geographical expansion' across borders. Internationalization is not just about entering new markets, but capturing global resources and arbitrage opportunities. This module explores why firms go global, how to evaluate the 'CAGE distance' of foreign markets, select entry modes, and balance global integration with local responsiveness.",
+m0_why:"Why Learn About Geographical Expansion?",
+m0_why_desc:"When domestic markets saturate, firms must go global. But internationalization brings the 'Liability of Foreignness'. Understanding how to overcome cultural/institutional differences, choose the right entry mode (e.g., licensing vs FDI), and structure transnational organizations are mandatory skills for modern executives.",
+m0_modules:[
+  {num:"01",title:"National Advantage & Motives",desc:"Market/Resource/Efficiency seeking, Porter's National Diamond"},
+  {num:"02",title:"Evaluating Markets: CAGE Distance",desc:"Impact of Cultural, Administrative, Geographic, and Economic distances"},
+  {num:"03",title:"Modes of Entry",desc:"Exporting, Licensing, JVs, Wholly Owned Subsidiaries (Risk vs. Control)"},
+  {num:"04",title:"Global Strategy & Organization",desc:"I-R Framework (Global vs Multidomestic), Ghemawat's AAA Triangle"}
+],
+m0_stats:[
+  {val:"CAGE",label:"Four Distance Framework"},
+  {val:"Diamond",label:"Porter's National Adv."},
+  {val:"I-R",label:"Integration-Response"},
+  {val:"4",label:"Learning Modules"}
+],
+m0_start:"Start Learning →",
+
+m1_nav:"1. Motives & Advantage",m1_title:"National Advantage & Internationalization Motives",
+m1_p1:"Traditional motives for going global are Market-seeking and Resource-seeking. However, in the modern global economy, Efficiency-seeking (e.g., global supply chain fragmentation) and Strategic asset-seeking (e.g., acquiring a Silicon Valley AI startup for tech) are equally important.",
+m1_p2:"\"Why does a nation become the home base for successful international competitors in an industry? It is formed by the national environment.\" — Michael Porter",
+m1_p3:"To explain how national environments confer advantage, Michael Porter introduced the 'National Diamond Model'. It consists of four interacting attributes: (1) Factor conditions: specialized talent or infrastructure; (2) Demand conditions: demanding domestic buyers push firms to innovate; (3) Related and supporting industries: strong clusters provide synergy; (4) Firm strategy, structure, and rivalry: intense domestic competition breeds international strength.",
+m1_p4:"Cross-border expansion is essentially combining 'Ownership advantages' (patents, brands nurtured at home) with 'Location advantages' (cheap labor, huge markets in the host country) to create value beyond local competitors.",
+m1_cards:[
+  {title:"Market-seeking",desc:"When domestic markets are saturated/small, firms must push products overseas to amortize massive fixed/R&D costs. E.g., Switzerland's Nestlé heavily relies on foreign markets."},
+  {title:"Efficiency-seeking",desc:"Firms locate different value chain activities where costs are lowest or efficiency is highest globally. E.g., Apple keeping design in California but moving assembly to China/India."},
+  {title:"Porter's 'Demand Conditions'",desc:"Japanese consumers are extremely demanding regarding electronics and miniaturization. This harsh domestic demand forced Sony and Panasonic to develop world-leading miniaturization tech."},
+  {title:"Crucible of Domestic Rivalry",desc:"The brutal domestic competition among German automakers (Mercedes, BMW, Audi, VW) forged their global dominance. Iron sharpens iron."}
+],
+m1_terms:[
+  {front:"Liability of Foreignness",back:"The inherent disadvantage and extra costs foreign firms face in host countries due to unfamiliarity with local culture/laws and xenophobic consumer attitudes."},
+  {front:"National Diamond Model",back:"Porter's framework explaining national competitive advantage through the interaction of factor conditions, demand conditions, supporting industries, and firm rivalry."},
+  {front:"Location Advantages",back:"Advantages specific to a country or region that lower production costs or add value, such as natural resources, cheap labor, or tax incentives."}
+],
+m1_q:[
+  {q:"Acquiring an AI startup in Silicon Valley primarily falls under which internationalization motive?",opts:["Market-seeking","Resource-seeking","Efficiency-seeking","Strategic asset-seeking"],ans:3,exp:"Investing abroad specifically to acquire advanced tech, brands, or unique organizational capabilities is strategic asset-seeking."},
+  {q:"According to Porter's Diamond Model, which is a positive factor for a firm's global competitiveness?",opts:["Government protecting firms from all competition","Highly demanding and sophisticated domestic consumers","Lack of domestic suppliers","Extreme scarcity of all resources"],ans:1,exp:"Demanding domestic buyers (Demand Conditions) force firms to continuously innovate and improve quality, making them globally competitive."},
+  {q:"The 'Liability of Foreignness' refers to:",opts:["The extra operational and adaptation costs foreign firms face compared to local firms","Foreign firms not having to pay taxes","Poor foreign language skills","Being discriminated against in the home country"],ans:0,exp:"Foreign firms suffer from unfamiliarity with host country regulations, culture, and networks, generating additional learning costs."},
+  {q:"Germany's auto industry has a powerful cluster of component suppliers (e.g., Bosch). This relates to which Diamond Model element?",opts:["Factor conditions","Demand conditions","Related and supporting industries","Domestic rivalry"],ans:2,exp:"Strong upstream/downstream suppliers (Related & Supporting Industries) provide innovation and high-quality components, strengthening the core industry."},
+  {q:"Nike moving shoe manufacturing to Asian countries is primarily motivated by?",opts:["Market-seeking","Efficiency-seeking (pursuing lowest cost locations)","Strategic asset-seeking","Government mandates"],ans:1,exp:"Moving labor-intensive value chain activities to countries with lower wages is a classic efficiency-seeking motive."},
+  {q:"'Ownership advantages' refer to:",opts:["The firm owning land abroad","The firm possessing unique patents, brands, or management techniques to overcome the liability of foreignness","Government-granted privileges","100% insider stock ownership"],ans:1,exp:"Ownership advantages are the core weapons MNCs rely on to compete overseas and offset their unfamiliarity with the local market."},
+  {q:"In Porter's Diamond, how does intense domestic rivalry affect firms?",opts:["Weakens their international competitiveness","Forces continuous improvement and innovation, thereby strengthening international competitiveness","Causes bankruptcy","No effect"],ans:1,exp:"Brutal domestic competition is the strongest training ground. Firms that survive domestically are usually formidable internationally."},
+  {q:"If a country lacks basic infrastructure but the government heavily invests in training high-end engineers, this improves which Diamond element?",opts:["Demand conditions","Basic factor conditions","Advanced Factor Conditions","Related industries"],ans:2,exp:"Porter emphasizes that 'advanced and specialized factor conditions' like top-tier talent and research institutes have far more strategic importance than natural resources."}
+],
+
+m2_nav:"2. Evaluating Markets",m2_title:"Evaluating Markets: The CAGE Distance Framework",
+m2_p1:"When evaluating foreign markets, firms often over-rely on hard economic metrics like 'GDP' or 'population', ignoring the true friction of cross-border operations. Pankaj Ghemawat points out that 'distance' is not just geographic; it is multidimensional.",
+m2_p2:"\"Distance still matters. We are not living in a borderless world. Companies that ignore distance when expanding abroad will pay a heavy price.\" — Pankaj Ghemawat",
+m2_p3:"Ghemawat proposed the 'CAGE Distance Framework' to comprehensively assess bilateral market differences: (1) Cultural Distance: differences in language, religion, values, and social norms. (2) Administrative/Political Distance: lack of colonial ties, no shared currency, political hostility, or protectionist laws. (3) Geographic Distance: physical distance, lack of land borders, no direct flights, or climate differences. (4) Economic Distance: gaps in per capita income, infrastructure quality, and labor costs.",
+m2_p4:"Different industries are sensitive to different distances. E.g., Food and media are extremely sensitive to 'Cultural distance'. Highly regulated industries (aerospace, telecom) are sensitive to 'Administrative distance'. Perishable or low-value/high-weight goods (cement) are sensitive to 'Geographic distance'. Labor-intensive industries focus most on 'Economic distance'.",
+m2_cards:[
+  {title:"Cultural Distance",desc:"US tech giants like Google and eBay stumbled in China and Japan largely because they failed to adapt to unique cultural habits, UI preferences, and social networks."},
+  {title:"Administrative Distance",desc:"Why did Spain's telecom giant Telefonica expand primarily into Latin America? Because shared language and similar administrative systems (colonial ties) drastically reduced political/regulatory risks."},
+  {title:"Geographic Distance",desc:"It's not just kilometers, but infrastructure connectivity. E.g., Trade between Canada and the US is massive because they share a border and highly integrated infrastructure."},
+  {title:"Economic Distance",desc:"Walmart often struggles in developing countries because its business model relies on robust IT and high-efficiency logistics (suited for high economic development), which fail in countries with poor infrastructure."}
+],
+m2_terms:[
+  {front:"CAGE Framework",back:"Ghemawat's framework measuring bilateral friction and differences through four dimensions: Cultural, Administrative, Geographic, and Economic distances."},
+  {front:"Cultural Distance",back:"Differences in language, religion, social norms, and consumer preferences. Impacts culturally resonant products (food, entertainment) the most."},
+  {front:"Psychic Distance",back:"The perceived distance by decision-makers. Sometimes physical distance is short, but psychic distance is vast, leading to severe market misjudgments."}
+],
+m2_q:[
+  {q:"In Ghemawat's CAGE framework, what does 'C' stand for?",opts:["Capital","Cost","Cultural","Communication"],ans:2,exp:"CAGE stands for Cultural, Administrative, Geographic, Economic."},
+  {q:"For low-value, high-weight products like 'cement', which CAGE distance is most fatal?",opts:["Cultural","Administrative","Geographic","Economic"],ans:2,exp:"Heavy, bulky, low-value goods have exorbitant transport costs, making them extremely sensitive to physical Geographic distance."},
+  {q:"A UK firm faces less resistance expanding to Australia than to nearby France. Which CAGE dimensions best explain this?",opts:["Geographic & Economic","Cultural & Administrative (Shared language and Commonwealth institutional ties)","Climate & Timezone","Cost & Profit"],ans:1,exp:"Shared language and similar legal systems (short Cultural/Admin distances) offset the vast physical Geographic distance."},
+  {q:"MNCs facing corruption, red tape, and foreign ownership limits in developing countries reflect which distance?",opts:["Cultural","Administrative/Political","Geographic","Economic"],ans:1,exp:"Differences in government regulations, institutional transparency, and political hostility fall under Administrative/Political Distance."},
+  {q:"In the CAGE framework, if two countries share colonial ties (e.g., Portugal & Brazil), what is the impact?",opts:["Increases economic distance","Shortens administrative and cultural distance, boosting bilateral trade","No effect","Increases geographic distance"],ans:1,exp:"Colonial ties usually leave shared languages, similar legal systems, and cultural habits, drastically lowering transaction frictions."},
+  {q:"McDonald's launching 'no beef, no pork' burgers in India primarily addresses challenges from which distance?",opts:["Cultural distance (religion and dietary taboos)","Administrative distance","Geographic distance","Economic distance"],ans:0,exp:"Dietary habits are deeply rooted in religion and social values—a classic Cultural Distance challenge."},
+  {q:"Why do firms often fall into the trap of 'ignoring CAGE distances'?",opts:["They hate maps","They over-focus on market size (GDP, population) and underestimate hidden institutional and cultural friction costs","Governments ban analysis","CAGE is too complex"],ans:1,exp:"Firms see '1.4 billion people in China' but ignore the complex political, economic, and cultural differences, leading to investment disasters."},
+  {q:"When labor-intensive apparel manufacturing seeks global supply chain locations, which distance is it most concerned with (to find lowest labor costs)?",opts:["Cultural","Administrative","Geographic","Economic distance (gaps in per capita income and wages)"],ans:3,exp:"Efficiency-seeking industries care most about Economic distance—specifically, the massive gaps in wages and factor costs between countries."}
+],
+
+m3_nav:"3. Modes of Entry",m3_title:"Modes of Entry",
+m3_p1:"Once a foreign market is selected, a firm must choose a 'Mode of Entry'. This is fundamentally a trade-off between 'Resource Commitment / Risk' and 'Degree of Control'.",
+m3_p2:"On the far left of the spectrum are Exporting and Licensing / Franchising. These require low capital and carry low risk, but offer poor control over the local market and face risks of agency problems or technology leakage. E.g., a licensee might ruin the parent brand's reputation for short-term profit.",
+m3_p3:"In the middle are Joint Ventures (JV) and Strategic Alliances. Firms share risk and profit with a local partner, rapidly gaining local knowledge and distribution, or satisfying local government foreign-ownership limits. Drawbacks include potential decision gridlock or having core tech 'hollowed out' by the partner.",
+m3_p4:"On the far right are 100% Wholly Owned Subsidiaries. The firm enjoys absolute control, protects core patents, and integrates global strategy seamlessly. However, this carries the highest capital commitment and risk. Sub-paths include Greenfield Investment (building from scratch; slow but culturally pure) and Acquisition (buying instant market share and assets, but facing tough integration).",
+m3_cards:[
+  {title:"Exporting",desc:"The safest way to test the waters. Avoids the fixed costs of building local plants, but faces high transport costs, tariff barriers, and poor local responsiveness."},
+  {title:"Licensing",desc:"Granting rights to intangible assets (patents, trademarks) to a foreign firm for a royalty. Pro: risk-free income. Con: potentially breeding a future competitor."},
+  {title:"Joint Ventures",desc:"Extremely common in China, where the government often mandates foreign firms partner with local ones (e.g., early auto industry). Lowers political risk and leverages local networks."},
+  {title:"Greenfield vs. Acquisition",desc:"Greenfield is like having your own baby: slow to grow, but no rejection. Acquisition is like adoption: instant capabilities, but severe organizational culture clashes."}
+],
+m3_terms:[
+  {front:"Foreign Direct Investment (FDI)",back:"A firm crossing borders to invest in and maintain substantial control over foreign physical assets or enterprises (includes JVs and wholly owned subsidiaries)."},
+  {front:"Greenfield Investment",back:"A form of FDI where a firm builds new operational facilities from the ground up in a foreign country."},
+  {front:"Wholly Owned Subsidiary",back:"A foreign branch where the parent firm owns 100% of the equity, bearing maximum risk but retaining absolute control and tech protection."}
+],
+m3_q:[
+  {q:"What is the core trade-off when selecting a foreign market entry mode?",opts:["Product price vs quantity","'Resource Commitment / Risk' vs 'Degree of Control'","Employee wages vs working hours","Ad budget vs profit"],ans:1,exp:"High control (e.g., wholly owned) always comes with high capital commitment and risk; low risk modes (e.g., export) lack market control."},
+  {q:"Which entry mode has the 'lowest resource commitment' and 'lowest risk'?",opts:["Wholly Owned Subsidiary","Joint Venture","Exporting","Greenfield"],ans:2,exp:"Exporting requires no overseas plant investment or massive sales teams, making it the lowest-risk entry method."},
+  {q:"What is the biggest hidden danger of 'Licensing' as an entry mode?",opts:["Transport costs are too high","May leak core tech, inadvertently breeding a future competitor","Requires massive capital to build plants","Restricted by tariffs"],ans:1,exp:"Once the licensee masters the tech, if the contract ends or is breached, they can become a formidable rival to the parent firm."},
+  {q:"Why do MNCs often choose 'Joint Ventures' (JVs) when entering emerging markets like China or India?",opts:["To gain 100% control","To acquire the local partner's political connections/channels, or to satisfy local government foreign-ownership restrictions","Because they don't have to share profits","To evade taxes"],ans:1,exp:"JVs effectively overcome the liability of foreignness and comply with developing nations' legal restrictions on foreign ownership."},
+  {q:"'Buying land, building a factory, and hiring staff from scratch' overseas describes which investment mode?",opts:["Acquisition","Greenfield Investment","Indirect Export","Licensing"],ans:1,exp:"Greenfield means building from scratch on an 'undeveloped green field'. Slower, but allows perfect replication of parent culture and processes."},
+  {q:"Compared to Greenfield, what is the biggest advantage of 'Acquisition'?",opts:["Zero organizational culture clash","Extremely rapid acquisition of local market share, brands, and existing assets","Costs no money","Government never reviews it"],ans:1,exp:"Acquisitions buy time and market share instantly, but post-merger cultural integration and talent retention are massive challenges."},
+  {q:"If a tech firm has highly secretive core tech that is easily stolen, which entry mode should it choose?",opts:["Broad licensing to local firms","100% Wholly Owned Subsidiary","Minority JV","Indirect export"],ans:1,exp:"When tech spillover risk is critical, firms must choose wholly owned subsidiaries to maintain absolute control and prevent partner theft."},
+  {q:"Authorizing an independent overseas operator to use trademarks, SOPs, and marketing resources describes which mode?",opts:["Joint Venture","Greenfield","Franchising","FDI"],ans:2,exp:"Common in services (fast food, hotels). The franchisee invests capital and runs it; the parent collects royalties and controls quality."}
+],
+
+m4_nav:"4. Global Strategy & Org",m4_title:"Global Strategy & Organization: I-R Framework & AAA Triangle",
+m4_p1:"When operating globally, MNCs face two conflicting forces: (1) The need to reduce costs, driving the pursuit of 'Global Integration' and standardized scale economies; (2) The need to satisfy local differences, driving 'Local Responsiveness' and customization. This forms Bartlett & Ghoshal's famous 'Integration-Responsiveness (I-R) Framework'.",
+m4_p2:"Based on these two forces, transnational strategies divide into four types: (1) International: transfer parent core competencies/products directly abroad (Low Int, Low Resp). (2) Multidomestic: grant high autonomy to local subsidiaries to heavily customize products (Low Int, High Resp). (3) Global: treat the world as a single market, producing standardized goods for maximum efficiency (High Int, Low Resp). (4) Transnational: simultaneously pursue global efficiency and local responsiveness, sharing knowledge via complex global networks (High Int, High Resp).",
+m4_p3:"Additionally, Pankaj Ghemawat proposed the 'AAA Triangle': when expanding, firms can choose Adaptation (local responsiveness), Aggregation (global scale economies), or Arbitrage (exploiting cross-border factor cost differences, e.g., call centers in India).",
+m4_p4:"\"Most companies lack the managerial bandwidth to execute all three A's simultaneously. Focusing on one or two A's, supported by the right organizational structure, is the path to winning.\" — Ghemawat",
+m4_cards:[
+  {title:"Multidomestic",desc:"E.g., early Unilever or MTV. Local subsidiaries act like independent kingdoms; product formulas and marketing are entirely localized. Drawback: high costs, unable to leverage global scale."},
+  {title:"Global Strategy",desc:"E.g., Intel or Boeing. Demand for microprocessors or jets is identical worldwide. Firms concentrate production in lowest-cost hubs and sell standardized products globally."},
+  {title:"Transnational",desc:"The holy grail of MNCs. Requires global low costs plus local flexibility. E.g., Caterpillar shares core engine R&D globally but tweaks external attachments based on local terrain and laws."},
+  {title:"Arbitrage",desc:"Profiting by exploiting (rather than overcoming) differences between countries. Most typical is 'labor arbitrage', like offshoring software dev to India or call centers to the Philippines."}
+],
+m4_terms:[
+  {front:"I-R Framework",back:"Integration-Responsiveness Framework. A matrix analyzing how MNCs balance 'Global Integration (scale economies)' and 'Local Responsiveness (meeting local differences)'."},
+  {front:"Transnational Strategy",back:"The most complex strategy in the I-R matrix, attempting to simultaneously maximize global efficiency, local adaptability, and cross-border learning. Usually uses a matrix org structure."},
+  {front:"AAA Triangle",back:"Ghemawat's global strategy framework: Adaptation (localization), Aggregation (scale), and Arbitrage (exploiting differences)."}
+],
+m4_q:[
+  {q:"In the I-R framework, what is the primary driver for 'Global Integration'?",opts:["Huge differences in consumer preferences","Host government demands","Pressure to pursue scale economies and reduce costs","Desire to increase management complexity"],ans:2,exp:"Facing intense price competition, firms must lower global total costs through standardized production and centralized R&D."},
+  {q:"Giving overseas subsidiaries immense autonomy to drastically modify products for local tastes belongs to which strategy?",opts:["Multidomestic Strategy","Global Strategy","International Strategy","Arbitrage Strategy"],ans:0,exp:"Multidomestic (High local response, Low global integration) treats each country as an independent market, acting like a local firm."},
+  {q:"What is a typical characteristic of a 'Global Strategy'?",opts:["Selling completely different products in every country","Treating the world as a single market, centralizing production of standardized goods for ultimate cost efficiency","Moving HQ overseas","Relying entirely on local distributors"],ans:1,exp:"Like commercial jets or semiconductors, demand is homogeneous. Firms produce globally standardized goods in a few low-cost hubs."},
+  {q:"Why is the 'Transnational Strategy' considered the hardest to execute?",opts:["Because it requires no resources","Because it attempts to simultaneously achieve 'High Global Integration' and 'High Local Responsiveness', which are contradictory goals","Because it violates international law","Because it only applies to one country"],ans:1,exp:"Simultaneously pursuing standardization (cutting costs) and customization (meeting differences) requires highly complex matrix organizations and knowledge networks."},
+  {q:"In Ghemawat's AAA Triangle, profiting from wage or tax gaps between countries (e.g., moving call centers to India) belongs to which 'A'?",opts:["Adaptation","Aggregation","Arbitrage","Alliance"],ans:2,exp:"Arbitrage focuses on 'exploiting' economic or regulatory differences between countries to create an advantage, rather than 'overcoming' them."},
+  {q:"If an industry is characterized by 'minimal consumer demand differences globally, but extreme price competition', which strategy is best?",opts:["Multidomestic","Global Strategy","Withdraw from international markets","Produce only at home and raise prices"],ans:1,exp:"Small demand differences mean low need for 'Local Responsiveness'; fierce price competition means high need for 'Global Integration'. This mandates a Global Strategy."},
+  {q:"In the AAA strategy, which 'A' is most commonly used to overcome 'Cultural Distance'?",opts:["Adaptation","Aggregation","Arbitrage","None of the above"],ans:0,exp:"Adaptation involves modifying products or marketing locally to suit and overcome cultural and regulatory differences in each country."},
+  {q:"Early US firms developing/producing at home and exporting directly without modifying products. Which I-R strategy is this?",opts:["International Strategy","Transnational Strategy","Multidomestic","Global Strategy"],ans:0,exp:"International Strategy (Low Int, Low Resp) simply transfers parent company products/innovations directly to foreign markets lacking that tech."}
+],
+
+m6_nav:"6. Resources",m6_title:"Extended Learning Resources",m6_desc:"Curated classic literature and practical insights in international business and global strategy for further exploration.",
+mlab_nav:"7. Interactive Lab",mlab_title:"Interactive Laboratory",mlab_desc:"Experience CAGE distance, entry mode trade-offs, and I-R matrix decision-making through visual simulators.",
+date:"Version 2026.04.12",copyright:"For Educational Use Only",
+architect_label:"Architect:",architect_name:"Prof. Shihmin Lo",
+architect_url:"https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+}
+};
+
+const TOTAL = 9; 
+
+/* ═══════ FLIP CARD ═══════ */
 const FlipCard = ({ front, back, t }) => {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div className="perspective cursor-pointer h-36" onClick={() => setFlipped(!flipped)}>
+    <div className="perspective cursor-pointer h-36 select-none" onClick={() => setFlipped(!flipped)}>
       <div className={`transform-style-3d relative w-full h-full transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''}`}>
         <div className="backface-hidden absolute inset-0 bg-white dark:bg-slate-800 rounded-xl p-4 flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
-          <p className="font-serif font-bold text-center text-[#004030] dark:text-[#D8C3A5]">{front}</p>
+          <p className="font-serif font-bold text-center text-[#004030] dark:text-[#D8C3A5] text-sm leading-snug whitespace-pre-line">{front}</p>
           <p className="text-xs text-slate-400 mt-2">{t.flip_prompt}</p>
         </div>
         <div className="backface-hidden rotate-y-180 absolute inset-0 bg-[#004030] dark:bg-slate-700 rounded-xl p-4 flex items-center justify-center">
@@ -77,7 +433,7 @@ const FlipCard = ({ front, back, t }) => {
   );
 };
 
-/* ─── ModuleQuiz ─── */
+/* ═══════ MODULE QUIZ ═══════ */
 const ModuleQuiz = ({ questions, t, moduleId, onQuizSubmit }) => {
   const [selected, setSelected] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -85,22 +441,22 @@ const ModuleQuiz = ({ questions, t, moduleId, onQuizSubmit }) => {
     [...Array(questions.length).keys()].sort(() => Math.random() - 0.5).slice(0, 4)
   );
   return (
-    <div className="mt-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-      <h3 className="text-lg font-bold font-serif text-[#004030] dark:text-[#D8C3A5] mb-6">{t.quiz_title}</h3>
+    <div className="mt-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 select-none">
+      <h3 className="text-lg font-bold font-serif text-[#004030] dark:text-[#D8C3A5] mb-6 flex items-center"><IconBookOpen size={20} className="mr-2"/>{t.quiz_title}</h3>
       {quizIndices.map((qIdx, i) => {
         const q = questions[qIdx];
         return (
           <div key={qIdx} className="mb-6">
-            <p className="font-bold mb-3">{i+1}. {q.q}</p>
+            <p className="font-bold mb-3 text-slate-800 dark:text-slate-200">{i+1}. {q.q}</p>
             <div className="space-y-2">
               {q.opts.map((opt, oIdx) => (
                 <button key={oIdx} onClick={() => !submitted && setSelected(s => ({...s, [i]: oIdx}))}
                   className={`w-full text-left px-4 py-3 rounded-lg border transition-all text-sm
                     ${submitted
-                      ? oIdx === q.ans ? 'bg-green-100 border-green-500 dark:bg-green-900/30 dark:border-green-500'
-                        : selected[i] === oIdx ? 'bg-red-100 border-red-400 dark:bg-red-900/30 dark:border-red-400' : 'border-slate-200 dark:border-slate-700'
-                      : selected[i] === oIdx ? 'border-[#004030] dark:border-[#D8C3A5] bg-[#004030]/5 dark:bg-[#D8C3A5]/5' : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                    }`}>
+                      ? oIdx === q.ans ? 'bg-green-100 border-green-500 dark:bg-green-900/30 dark:border-green-500 font-bold'
+                        : selected[i] === oIdx ? 'bg-red-100 border-red-400 dark:bg-red-900/30 dark:border-red-400 text-red-600' : 'border-slate-200 dark:border-slate-700'
+                      : selected[i] === oIdx ? 'border-[#004030] dark:border-[#D8C3A5] bg-[#004030]/5 dark:bg-[#D8C3A5]/5 font-bold text-[#004030] dark:text-[#D8C3A5]' : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                    } text-slate-700 dark:text-slate-300`}>
                   {opt}
                 </button>
               ))}
@@ -109,621 +465,217 @@ const ModuleQuiz = ({ questions, t, moduleId, onQuizSubmit }) => {
           </div>
         );
       })}
-      {!submitted
-        ? <button onClick={() => { setSubmitted(true); const c = quizIndices.filter((qIdx,i) => selected[i] === questions[qIdx].ans).length; onQuizSubmit(moduleId, c, quizIndices.length); }}
-            disabled={Object.keys(selected).length < quizIndices.length}
-            className="px-6 py-2 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-bold rounded-lg disabled:opacity-40 transition-all">
-            {t.submit}
+      {!submitted ? (
+        <button onClick={() => { 
+            setSubmitted(true); 
+            const c = quizIndices.filter((qIdx,i) => selected[i] === questions[qIdx].ans).length; 
+            onQuizSubmit(moduleId, c, quizIndices.length, questions.length); 
+          }}
+          disabled={Object.keys(selected).length < quizIndices.length}
+          className="px-6 py-2 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-bold rounded-lg disabled:opacity-40 transition-all">
+          {t.submit}
+        </button>
+      ) : (
+        <div className="flex items-center gap-4">
+          <p className="font-bold text-[#004030] dark:text-[#D8C3A5]">{t.score}: {quizIndices.filter((qIdx,i) => selected[i] === questions[qIdx].ans).length}/{quizIndices.length}</p>
+          <button onClick={() => { setSelected({}); setSubmitted(false); }}
+            className="px-6 py-2 border border-[#004030] dark:border-[#D8C3A5] text-[#004030] dark:text-[#D8C3A5] font-bold rounded-lg hover:bg-[#004030]/10 transition-colors">
+            {t.retry}
           </button>
-        : <div className="flex items-center gap-4">
-            <span className="font-bold text-[#004030] dark:text-[#D8C3A5]">{t.score}: {quizIndices.filter((qIdx,i) => selected[i] === questions[qIdx].ans).length}/{quizIndices.length}</span>
-            <button onClick={() => { setSelected({}); setSubmitted(false); }}
-              className="px-6 py-2 border border-[#004030] dark:border-[#D8C3A5] text-[#004030] dark:text-[#D8C3A5] font-bold rounded-lg">
-              {t.retry}
-            </button>
-          </div>
-      }
+        </div>
+      )}
     </div>
   );
 };
 
-/* ─── LinkCard ─── */
+/* ═══════ LINK CARD ═══════ */
 const LinkCard = ({label, url, desc}) => (
   <a href={url} target="_blank" rel="noopener noreferrer"
-    className="block bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 hover:border-[#004030] dark:hover:border-[#D8C3A5] hover:shadow-md transition-all group">
+    className="block bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 hover:border-[#004030] dark:hover:border-[#D8C3A5] hover:shadow-md transition-all group select-none">
     <div className="flex items-start justify-between gap-2 mb-2">
       <span className="font-bold font-serif text-sm text-[#004030] dark:text-[#D8C3A5] group-hover:underline leading-snug">{label}</span>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-30 group-hover:opacity-70 mt-0.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      <svg draggable="false" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-1 opacity-40 group-hover:opacity-100 transition-opacity"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
     </div>
     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
   </a>
 );
 
-/* ─── H2 with icon ─── */
+/* ═══════ LAB COMPONENTS (GEOGRAPHICAL EXPANSION) ═══════ */
+
+// 1. CAGE Distance Calculator
+const CAGELab = ({lang}) => {
+  const [c, setC] = useState(50);
+  const [a, setA] = useState(50);
+  const [g, setG] = useState(50);
+  const [e, setE] = useState(50);
+  
+  const score = Math.round((c+a+g+e)/4);
+  let risk, color;
+  if(score >= 75) { risk = lang==='zh'?'極高摩擦：建議審慎評估或放棄':'Extreme Friction: Caution/Abandon'; color = 'text-red-500'; }
+  else if(score >= 40) { risk = lang==='zh'?'中度摩擦：需客製化與在地合資':'Moderate Friction: Needs Adaptation/JV'; color = 'text-yellow-600'; }
+  else { risk = lang==='zh'?'低摩擦：適合直接進入/標準化':'Low Friction: Suitable for Direct Entry'; color = 'text-green-600'; }
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 select-none">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-3">{lang==='zh'?'CAGE 距離評估器':'CAGE Distance Calculator'}</h4>
+      <p className="text-xs text-slate-500 mb-4">{lang==='zh'?'評估目標市場與母國在四個維度上的差異，計算外來者劣勢。':'Assess differences in 4 dimensions to calculate Liability of Foreignness.'}</p>
+      
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>C: {lang==='zh'?'文化距離 (語言/價值觀)':'Cultural (Language/Values)'}</span><span>{c}</span>
+          </div>
+          <input type="range" min="0" max="100" value={c} onChange={ev=>setC(+ev.target.value)} className="w-full accent-blue-500"/>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>A: {lang==='zh'?'行政距離 (政治/法規/無連結)':'Administrative (Politics/Laws)'}</span><span>{a}</span>
+          </div>
+          <input type="range" min="0" max="100" value={a} onChange={ev=>setA(+ev.target.value)} className="w-full accent-red-500"/>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>G: {lang==='zh'?'地理距離 (實體距離/缺乏直航)':'Geographic (Physical/Transport)'}</span><span>{g}</span>
+          </div>
+          <input type="range" min="0" max="100" value={g} onChange={ev=>setG(+ev.target.value)} className="w-full accent-green-500"/>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>E: {lang==='zh'?'經濟距離 (所得/基礎設施落差)':'Economic (Income/Infrastructure)'}</span><span>{e}</span>
+          </div>
+          <input type="range" min="0" max="100" value={e} onChange={ev=>setE(+ev.target.value)} className="w-full accent-orange-500"/>
+        </div>
+      </div>
+      
+      <div className="mt-5 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg text-center border border-slate-200 dark:border-slate-700">
+        <div className="text-xs text-slate-500 mb-1">{lang==='zh'?'外來者劣勢指數':'Liability of Foreignness Index'}</div>
+        <div className={`text-2xl font-black ${color}`}>{score}/100</div>
+        <div className={`text-xs mt-1 font-bold ${color}`}>{risk}</div>
+      </div>
+    </div>
+  );
+};
+
+// 2. Entry Mode Selector
+const EntryModeLab = ({lang}) => {
+  const [control, setControl] = useState(50); // Desired Control
+  const [commitment, setCommitment] = useState(50); // Resource Commitment / Risk Tolerance
+  
+  let mode, desc;
+  if(control < 40 && commitment < 40) { 
+    mode = lang==='zh'?'出口 / 授權 (Export / Licensing)':'Export / Licensing'; 
+    desc = lang==='zh'?'極低風險，快速變現，但缺乏市場控制力與技術外洩風險。':'Very low risk, quick returns, but poor control and risk of tech leakage.'; 
+  } else if (control >= 70 && commitment >= 70) {
+    mode = lang==='zh'?'100% 獨資子公司 (Wholly Owned Subsidiary)':'Wholly Owned Subsidiary (FDI)';
+    desc = lang==='zh'?'最高風險與資本投入，但享有絕對控制權與技術保護。':'Highest risk and capital, but absolute control and tech protection.';
+  } else {
+    mode = lang==='zh'?'合資 / 策略聯盟 (Joint Venture / Alliance)':'Joint Venture / Alliance';
+    desc = lang==='zh'?'平衡風險與控制，利用當地夥伴知識，但可能面臨決策僵局。':'Balances risk and control, leverages local partner knowledge, but risks gridlock.';
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 select-none">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-3">{lang==='zh'?'市場進入模式決策台':'Entry Mode Selector'}</h4>
+      <div className="space-y-6">
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>{lang==='zh'?'期望的控制程度 (Control)':'Desired Degree of Control'}</span><span>{control>50?'High':'Low'}</span>
+          </div>
+          <input type="range" min="0" max="100" value={control} onChange={e=>setControl(+e.target.value)} className="w-full accent-blue-600"/>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs font-bold mb-1">
+            <span>{lang==='zh'?'資源承諾與風險承受度 (Commitment)':'Resource Commitment / Risk Tolerance'}</span><span>{commitment>50?'High':'Low'}</span>
+          </div>
+          <input type="range" min="0" max="100" value={commitment} onChange={e=>setCommitment(+e.target.value)} className="w-full accent-red-500"/>
+        </div>
+        <div className="p-4 bg-[#004030]/10 dark:bg-[#D8C3A5]/10 rounded-lg text-center border border-[#004030]/20 dark:border-[#D8C3A5]/20">
+          <div className="text-sm font-bold text-[#004030] dark:text-[#D8C3A5] mb-2">{mode}</div>
+          <div className="text-xs text-slate-600 dark:text-slate-400">{desc}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 3. I-R Framework Grid
+const IRFrameworkLab = ({lang}) => {
+  const [responsiveness, setResponsiveness] = useState(50); // X-axis
+  const [integration, setIntegration] = useState(50); // Y-axis
+  
+  let quad, action, color;
+  if(responsiveness>50 && integration>50) { 
+    quad = lang==='zh'?'跨國型策略 (Transnational)':'Transnational Strategy'; 
+    action = lang==='zh'?'兼顧全球效率與在地回應':'High efficiency + local response'; 
+    color='bg-purple-100 text-purple-700 border-purple-400 dark:bg-purple-900/30 dark:text-purple-300'; 
+  } else if(responsiveness<=50 && integration>50) { 
+    quad = lang==='zh'?'全球化策略 (Global Strategy)':'Global Strategy'; 
+    action = lang==='zh'?'標準化產品，追求規模經濟':'Standardized products, scale economies'; 
+    color='bg-blue-100 text-blue-700 border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'; 
+  } else if(responsiveness>50 && integration<=50) { 
+    quad = lang==='zh'?'多國本土化 (Multidomestic)':'Multidomestic Strategy'; 
+    action = lang==='zh'?'高度客製化，分公司獨立運作':'Highly customized, autonomous subsidiaries'; 
+    color='bg-green-100 text-green-700 border-green-400 dark:bg-green-900/30 dark:text-green-300'; 
+  } else { 
+    quad = lang==='zh'?'國際策略 (International)':'International Strategy'; 
+    action = lang==='zh'?'母國核心能力直接輸出':'Direct export of home competencies'; 
+    color='bg-slate-100 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300'; 
+  }
+
+  const dotX = responsiveness;
+  const dotY = 100 - integration; // Invert Y for CSS
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 select-none md:col-span-2">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-3">{lang==='zh'?'I-R 整合-回應矩陣':'I-R Framework Grid'}</h4>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex-1 space-y-4 justify-center flex flex-col">
+          <div>
+            <div className="flex justify-between text-xs font-bold mb-1">
+              <span>{lang==='zh'?'在地回應壓力 (X軸)':'Local Responsiveness Pressure (X)'}</span>
+            </div>
+            <input type="range" min="0" max="100" value={responsiveness} onChange={e=>setResponsiveness(+e.target.value)} className="w-full accent-slate-600"/>
+          </div>
+          <div>
+            <div className="flex justify-between text-xs font-bold mb-1">
+              <span>{lang==='zh'?'全球整合/降成本壓力 (Y軸)':'Global Integration Pressure (Y)'}</span>
+            </div>
+            <input type="range" min="0" max="100" value={integration} onChange={e=>setIntegration(+e.target.value)} className="w-full accent-slate-600"/>
+          </div>
+          <div className={`mt-2 p-3 rounded-lg border text-center ${color}`}>
+            <div className="font-bold text-sm">{quad}</div>
+            <div className="text-xs mt-1">{action}</div>
+          </div>
+        </div>
+
+        <div className="w-[200px] h-[200px] shrink-0 relative border-2 border-slate-800 dark:border-slate-200 mx-auto bg-slate-50 dark:bg-slate-900">
+          <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-400 dark:bg-slate-500 border-dashed border-l"></div>
+          <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-400 dark:bg-slate-500 border-dashed border-t"></div>
+          
+          <div className="absolute top-2 left-2 text-[10px] font-bold text-slate-400 text-center leading-tight">Global</div>
+          <div className="absolute top-2 right-2 text-[10px] font-bold text-slate-400 text-center leading-tight">Trans<br/>national</div>
+          <div className="absolute bottom-2 left-2 text-[10px] font-bold text-slate-400 text-center leading-tight">Inter<br/>national</div>
+          <div className="absolute bottom-2 right-2 text-[10px] font-bold text-slate-400 text-center leading-tight">Multi<br/>domestic</div>
+          
+          <div className="absolute w-4 h-4 bg-[#E3B152] border-2 border-[#004030] rounded-full shadow-md transition-all duration-300"
+               style={{ left:`calc(${dotX}% - 8px)`, top:`calc(${dotY}% - 8px)` }}></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+/* ═══════ H2 COMPONENT ═══════ */
 const H2 = ({ children, icon, number }) => (
-  <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black text-[#004030] dark:text-[#D8C3A5] mb-6 flex items-center gap-3">
+  <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black text-[#004030] dark:text-[#D8C3A5] mb-6 flex items-center gap-3 select-none">
     {icon && <span className="text-2xl">{icon}</span>}
     {number !== undefined && <span>{number}.</span>}
     <span>{children}</span>
   </h2>
 );
 
-/* ─── Lab Components (top-level) ─── */
-const IntegrationResponsivenessLab = ({lang}) => {
-  const [cx, setCx] = useState(50);
-  const [cy, setCy] = useState(50);
-  const strategies = lang==='zh'
-    ? [{name:'國際策略',x:25,y:25},{name:'全球策略',x:25,y:75},{name:'多國策略',x:75,y:25},{name:'跨國策略',x:75,y:75}]
-    : [{name:'International',x:25,y:25},{name:'Global',x:25,y:75},{name:'Multi-domestic',x:75,y:25},{name:'Transnational',x:75,y:75}];
-  const closest = strategies.reduce((best,s) => {
-    const d = Math.sqrt((cx-s.x)**2+(cy-s.y)**2);
-    return d < best.d ? {s,d} : best;
-  }, {s:strategies[0],d:999}).s;
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'整合-回應架構模擬器':'Integration-Responsiveness Simulator'}</h4>
-      <div className="relative w-full aspect-square max-w-sm mx-auto mb-4">
-        <svg viewBox="-30 -10 250 240" className="absolute inset-0 w-full h-full overflow-visible">
-          <rect x="0" y="0" width="200" height="200" fill="none" stroke="#cbd5e1" strokeWidth="1"/>
-          <line x1="100" y1="0" x2="100" y2="200" stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4"/>
-          <line x1="0" y1="100" x2="200" y2="100" stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="4"/>
-          
-          {/* X 軸文字 */}
-          <text x="100" y="220" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">{lang==='zh'?'在地回應壓力 →':'Local Responsiveness →'}</text>
-          
-          {/* Y 軸文字 (以 x=-15, y=100 為中心旋轉-90度) */}
-          <text x="-15" y="100" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500" transform="rotate(-90,-15,100)">{lang==='zh'?'全球整合壓力 →':'Global Integration →'}</text>
-          
-          {strategies.map((s,i)=><g key={i}>
-            <circle cx={s.x*2} cy={200-s.y*2} r="22" fill="#004030" opacity="0.12"/>
-            <text x={s.x*2} y={200-s.y*2+4} textAnchor="middle" fontSize="8" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{s.name}</text>
-          </g>)}
-          <circle cx={cx*2} cy={200-cy*2} r="7" fill="#D8C3A5" stroke="#004030" strokeWidth="2" className="transition-all duration-300"/>
-        </svg>
-      </div>
-      <div className="mt-8 space-y-4">
-        <div>
-          <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{lang==='zh'?'在地回應壓力 (Local Responsiveness)':'Local Responsiveness'}: {cx}%</label>
-          <input type="range" min="0" max="100" value={cx} onChange={e=>setCx(+e.target.value)} className="w-full mt-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{lang==='zh'?'全球整合壓力 (Global Integration)':'Global Integration'}: {cy}%</label>
-          <input type="range" min="0" max="100" value={cy} onChange={e=>setCy(+e.target.value)} className="w-full mt-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
-        </div>
-      </div>
-      <div className="mt-6 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg text-center">
-        <span className="text-sm text-slate-500 dark:text-slate-400">{lang==='zh'?'最接近策略':'Closest Strategy'}: </span>
-        <span className="text-base font-bold text-[#004030] dark:text-[#D8C3A5]">{closest.name}</span>
-      </div>
-    </div>
-  );
-};
-
-const EntryModeComparisonLab = ({lang}) => {
-  const modes = lang==='zh'
-    ? [{name:'出口',control:20,commit:15,risk:10},{name:'授權',control:25,commit:20,risk:20},{name:'加盟',control:35,commit:25,risk:25},{name:'合資',control:55,commit:55,risk:50},{name:'獨資子公司',control:95,commit:90,risk:85}]
-    : [{name:'Export',control:20,commit:15,risk:10},{name:'Licensing',control:25,commit:20,risk:20},{name:'Franchising',control:35,commit:25,risk:25},{name:'Joint Venture',control:55,commit:55,risk:50},{name:'Wholly Owned',control:95,commit:90,risk:85}];
-  const [selected, setSelected] = useState(0);
-  const m = modes[selected];
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'進入模式比較器':'Entry Mode Comparator'}</h4>
-      <div className="flex flex-wrap gap-2 mb-6">
-        {modes.map((md,i)=><button key={i} onClick={()=>setSelected(i)} className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex-1 text-center min-w-[70px] ${selected===i?'bg-[#004030] text-white dark:bg-[#D8C3A5] dark:text-[#004030] shadow-md':'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>{md.name}</button>)}
-      </div>
-      <div className="space-y-4">
-        {[{label:lang==='zh'?'控制程度':'Control',val:m.control},{label:lang==='zh'?'資源承諾':'Commitment',val:m.commit},{label:lang==='zh'?'風險程度':'Risk',val:m.risk}].map((bar,i)=>(
-          <div key={i}>
-            <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5"><span>{bar.label}</span><span>{bar.val}%</span></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-[#004030] dark:bg-[#D8C3A5] rounded-full transition-all duration-500 ease-out" style={{width:`${bar.val}%`}}/></div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const DiamondModelLab = ({lang}) => {
-  const [factors, setFactors] = useState({factor:60,demand:70,related:50,rivalry:80});
-  const labels = lang==='zh'?{factor:'要素條件',demand:'需求條件',related:'相關支援產業',rivalry:'企業策略與競爭'}:{factor:'Factor Conditions',demand:'Demand Conditions',related:'Related Industries',rivalry:'Strategy & Rivalry'};
-  const pts = [
-    {x:150,y:30-factors.rivalry*0.25},
-    {x:150+factors.demand*1.1,y:150},
-    {x:150,y:150+factors.related*0.9},
-    {x:150-factors.factor*1.1,y:150}
-  ];
-  const path = `M${pts.map(p=>`${p.x},${p.y}`).join(' L')} Z`;
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{lang==='zh'?'波特鑽石模型模擬器':'Porter Diamond Simulator'}</h4>
-      <div className="relative w-full aspect-[4/3] max-w-sm mx-auto mb-4">
-        <svg viewBox="-20 -10 340 280" className="absolute inset-0 w-full h-full overflow-visible">
-          <polygon points="150,30 260,150 150,240 40,150" fill="none" stroke="#e2e8f0" strokeWidth="1.5" strokeDasharray="4"/>
-          <path d={path} fill="#004030" opacity="0.15" stroke="#004030" strokeWidth="2.5" className="transition-all duration-300"/>
-          {pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="6" fill="#D8C3A5" stroke="#004030" strokeWidth="2" className="transition-all duration-300"/>)}
-          
-          <text x="150" y="10" textAnchor="middle" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.rivalry}</text>
-          <text x="275" y="154" textAnchor="start" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.demand}</text>
-          <text x="150" y="265" textAnchor="middle" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.related}</text>
-          <text x="25" y="154" textAnchor="end" fontSize="11" fill="#004030" className="dark:fill-[#D8C3A5]" fontWeight="bold">{labels.factor}</text>
-        </svg>
-      </div>
-      <div className="mt-6 space-y-3">
-        {Object.entries(factors).map(([k,v])=>(
-          <div key={k} className="flex items-center gap-3">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 w-24 shrink-0 truncate">{labels[k]}</label>
-            <input type="range" min="10" max="100" value={v} onChange={e=>setFactors(f=>({...f,[k]:+e.target.value}))} className="flex-1 accent-[#004030] dark:accent-[#D8C3A5]"/>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const GlobalValueChainLab = ({lang}) => {
-  const stages = lang==='zh'
-    ? [{name:'研發',loc:'美國/歐洲',cost:'高'},{name:'零組件製造',loc:'日本/韓國/台灣',cost:'中高'},{name:'組裝',loc:'中國/越南',cost:'低'},{name:'行銷/品牌',loc:'美國/歐洲',cost:'高'},{name:'售後服務',loc:'全球各地',cost:'中'}]
-    : [{name:'R&D',loc:'US/Europe',cost:'High'},{name:'Components',loc:'Japan/Korea/Taiwan',cost:'Med-High'},{name:'Assembly',loc:'China/Vietnam',cost:'Low'},{name:'Marketing',loc:'US/Europe',cost:'High'},{name:'After-Sales',loc:'Worldwide',cost:'Medium'}];
-  const [hover, setHover] = useState(-1);
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'全球價值鏈分布':'Global Value Chain Distribution'}</h4>
-      <div className="flex flex-wrap gap-3 justify-center">
-        {stages.map((s,i)=>(
-          <div key={i} onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(-1)}
-            className={`flex-1 min-w-[110px] p-4 rounded-xl text-center cursor-pointer transition-all border shadow-sm ${hover===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5] transform scale-105':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-slate-300'}`}>
-            <div className="text-sm font-bold mb-1">{s.name}</div>
-            <div className={`text-xs mt-2 transition-opacity duration-300 ${hover===i?'opacity-90':'opacity-0 h-0 overflow-hidden'}`}>{s.loc}</div>
-            <div className={`text-xs mt-1 transition-opacity duration-300 ${hover===i?'opacity-70':'opacity-0 h-0 overflow-hidden'}`}>{lang==='zh'?'成本':'Cost'}: {s.cost}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 flex justify-center">
-        <svg width="100%" height="16" className="max-w-md overflow-visible">
-          <rect x="0" y="7" width="100%" height="2" fill="#e2e8f0" className="dark:fill-slate-600"/>
-          {stages.map((_,i)=><circle key={i} cx={`${(i/(stages.length-1))*100}%`} cy="8" r={hover===i?"8":"5"} fill={hover===i?"#004030":"#D8C3A5"} className="transition-all duration-300"/>)}
-        </svg>
-      </div>
-    </div>
-  );
-};
-
-const InternationalSalesLab = ({lang}) => {
-  const data = [{name:'Intel',pct:82},{name:'Caterpillar',pct:67},{name:'IBM',pct:64},{name:'Apple',pct:58},{name:'GE',pct:54},{name:'Boeing',pct:46},{name:'Starbucks',pct:30},{name:'Walmart',pct:24}];
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'國際營收佔比（互動圖表）':'International Revenue Share (Interactive Chart)'}</h4>
-      <div className="space-y-4">
-        {data.map((d,i)=>(
-          <div key={i} className="group">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-bold w-24 text-right text-slate-600 dark:text-slate-400 group-hover:text-[#004030] dark:group-hover:text-[#D8C3A5] transition-colors">{d.name}</span>
-              <div className="flex-1 h-7 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden relative shadow-inner">
-                <div className="h-full bg-[#D8C3A5] rounded-full transition-all duration-700 group-hover:bg-[#004030] dark:group-hover:bg-[#D8C3A5]" style={{width:`${d.pct}%`}}/>
-                <span className="absolute right-3 top-0 h-full flex items-center text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-white dark:group-hover:text-[#004030] transition-colors">{d.pct}%</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="mt-5 text-xs text-slate-500 dark:text-slate-400 italic text-center">{lang==='zh'?'滑鼠移至長條上方查看高亮效果':'Hover over bars for highlight'}</p>
-    </div>
-  );
-};
-
-const CAGEDistanceLab = ({lang}) => {
-  const dims = lang==='zh'
-    ? [{name:'文化距離',icon:'🎭',examples:'語言、宗教、社會規範'},{name:'行政距離',icon:'🏛️',examples:'政治關聯、法律制度'},{name:'地理距離',icon:'🌍',examples:'物理距離、時區、交通'},{name:'經濟距離',icon:'💰',examples:'所得差異、資源成本'}]
-    : [{name:'Cultural',icon:'🎭',examples:'Language, religion, norms'},{name:'Administrative',icon:'🏛️',examples:'Political ties, legal system'},{name:'Geographic',icon:'🌍',examples:'Physical distance, timezone'},{name:'Economic',icon:'💰',examples:'Income gap, resource cost'}];
-  const [active, setActive] = useState(null);
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 h-full flex flex-col">
-      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-6">{lang==='zh'?'CAGE 距離架構':'CAGE Distance Framework'}</h4>
-      <div className="grid grid-cols-2 gap-4 flex-1">
-        {dims.map((d,i)=>(
-          <button key={i} onClick={()=>setActive(active===i?null:i)} className={`p-4 rounded-xl text-center transition-all border shadow-sm flex flex-col items-center justify-center ${active===i?'bg-[#004030] text-white border-[#004030] dark:bg-[#D8C3A5] dark:text-[#004030] dark:border-[#D8C3A5] transform scale-[1.02]':'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
-            <div className="text-3xl mb-2">{d.icon}</div>
-            <div className="text-sm font-bold">{d.name}</div>
-            <div className={`text-xs mt-3 transition-all duration-300 ${active===i?'opacity-90 max-h-20':'opacity-0 max-h-0 overflow-hidden'}`}>{d.examples}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-/* ─── Dict ─── */
-const TOTAL = 9;
-const dict = {
-  zh: {
-    brand: "GE",
-    title: "集團策略：地理區域擴張",
-    subtitle: "Corp Strategy: Geographical Expansion",
-    nav_modules: "單元目錄", nav_prev: "上一單元", nav_next: "下一單元",
-    key_terms: "關鍵專有名詞", flip_prompt: "點擊翻轉", audio_read: "語音導覽",
-    quiz_title: "模組知識檢定（隨機 4 題）",
-    submit: "提交答案", retry: "重新測驗",
-    score: "得分", correct: "正確", incorrect: "錯誤", explanation: "解析",
-
-    analytics_title: "學習歷程分析", analytics_desc: "追蹤您的學習進度、互動參與及測驗表現",
-    analytics_form_title: "基本資料",
-    analytics_group: "組別", analytics_dept: "系級",
-    analytics_dept_ph: "例：IBS3", analytics_id: "學號", analytics_id_ph: "例：112212099",
-    analytics_name: "姓名", analytics_name_ph: "例：Jimmy Lo",
-    analytics_export_csv: "匯出 CSV 歷程記錄",
-    analytics_fill_required: "請填寫完整資訊以解鎖匯出",
-    group_options: ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
-    analytics_total_time: "總學習時間", analytics_total_clicks: "總互動點擊",
-    analytics_overall_acc: "總體測驗答對率",
-    analytics_module: "模組", analytics_time: "停留時間",
-    analytics_clicks: "點擊次數", analytics_acc: "答對率",
-    analytics_correct_ans_total: "答對 / 已填答 / 總題數",
-    analytics_no_data: "尚未測驗", analytics_sec: "秒", analytics_times: "次",
-
-    m0_nav: "0. 課程總覽",
-    m0_title: "地理區域擴張策略", m0_intro: "本單元探討企業透過國際化追求成長的關鍵面向：為何走向全球、如何選擇進入模式、如何平衡全球整合與在地回應，以及跨國組織設計。結合 Porter 鑽石模型、整合-回應架構等經典理論，為跨國經營決策建立系統性分析框架。",
-    m0_why: "為什麼地理區域擴張重要？", m0_why_desc: "國際化既是巨大機會也是潛在威脅。Embraer 從巴西國營工廠崛起為全球第三大飛機製造商；Sheffield 的刀具產業卻因來自韓國和中國的低成本競爭而衰落。理解區域擴張策略，是現代經理人的核心能力。",
-    m0_modules: [
-      { num: "01", title: "為何走向全球", desc: "核心能力移轉、區位經濟、經驗曲線效益" },
-      { num: "02", title: "國家競爭優勢", desc: "Porter 鑽石模型與比較優勢理論" },
-      { num: "03", title: "海外市場進入模式", desc: "從出口到獨資子公司的策略光譜" },
-      { num: "04", title: "跨國策略選擇", desc: "全球整合 vs. 在地回應框架" },
-      { num: "05", title: "跨國組織設計", desc: "歐洲、美國、日本跨國企業的演進" }
-    ],
-    m0_stats: [
-      { val: "5", label: "學習模組" },
-      { val: "40", label: "測驗題目" },
-      { val: "15", label: "術語翻轉卡" },
-      { val: "6", label: "互動實驗" }
-    ],
-    m0_start: "開始學習 →",
-
-    m1_nav: "1. 為何走向全球", m1_title: "為何走向全球？",
-    m1_p1: "企業邁向國際化主要有三大驅動力：將核心能力從內部向外移轉至缺乏類似技能的海外市場（inside-out）、利用各國在生產上的比較優勢實現區位經濟（outside-in）、以及透過全球化銷量來實現經驗曲線效益與規模經濟（as a whole）。",
-    m1_p2: "「只要貿易障礙與運輸成本許可，將價值創造活動置於最適區位，可以降低成本或實現差異化。」— 區位經濟的核心邏輯",
-    m1_p3: "全球策略的五大價值來源包括：規模與複製的成本效益、服務全球客戶、利用國家資源差異進行套利（arbitrage）、跨國學習效益，以及戰略性跨市場競爭。例如 IKEA 在日本學習品質標準，再將經驗擴散至全球網絡。",
-    m1_cards: [
-      { title: "核心能力移轉", desc: "將獨特的技能與產品優勢帶到缺乏同類競爭者的海外市場" },
-      { title: "區位經濟", desc: "在最具比較優勢的國家設置各項價值活動，降低成本或提升差異化" },
-      { title: "經驗曲線效益", desc: "透過全球銷售量擴大，實現規模經濟與學習效果，降低單位生產成本" },
-      { title: "套利效益", desc: "利用各國資源差異（工資、技術、知識）創造價值" }
-    ],
-    m1_terms: [
-      { front: "核心能力移轉\nTransferring Core Competence", back: "將企業在母國開發的獨特技能與產品帶到海外市場，在當地競爭者缺乏類似能力的情況下建立優勢（inside-out 邏輯）" },
-      { front: "區位經濟\nLocation Economies", back: "利用各國比較優勢，將價值鏈活動配置在最佳地點，以降低成本或實現差異化（outside-in 邏輯）" },
-      { front: "經驗曲線效益\nExperience Curve Economies", back: "透過全球化銷售擴大生產量，利用規模經濟與學習效果降低單位成本" }
-    ],
-    m1_q: [
-      { q: "企業將核心能力從母國帶到海外市場缺乏類似能力的國家，這屬於什麼策略邏輯？", opts: ["區位經濟","核心能力移轉（inside-out）","經驗曲線","多角化"], ans: 1, exp: "核心能力移轉是將企業獨特的技能與產品帶到缺乏同類競爭者的海外市場" },
-      { q: "以下何者最能說明「區位經濟」的概念？", opts: ["在全球各地複製相同的生產流程","在各國配置最適當的價值活動以降低成本","透過全球銷售擴大規模經濟","購併當地企業以快速進入市場"], ans: 1, exp: "區位經濟的核心在於利用各國比較優勢，將價值鏈活動配置在最佳地點" },
-      { q: "經驗曲線效益主要透過什麼機制降低成本？", opts: ["多角化分散風險","政府補貼","規模經濟與學習效果","技術授權"], ans: 2, exp: "透過全球化銷售擴大生產量，利用規模經濟與學習效果降低單位成本" },
-      { q: "Nike 將製造從日本轉到台灣再到中國越南，最能說明何種策略？", opts: ["核心能力移轉","品牌差異化","套利策略","技術創新"], ans: 2, exp: "Nike 不斷追逐低成本製造地點，是利用國家間資源差異進行套利的典型案例" },
-      { q: "IKEA 進入日本市場後將品質能力擴散到全球，屬於全球策略的哪個價值來源？", opts: ["規模經濟","服務全球客戶","跨國學習效益","戰略性競爭"], ans: 2, exp: "跨國學習效益是將各國經驗整合並擴散至全球網絡的能力" },
-      { q: "全球化的主要促成因素不包含以下哪一項？", opts: ["交通與 ICT 技術進步","跨境貿易障礙降低","各國消費偏好完全趨同","外國直接投資自由化"], ans: 2, exp: "消費偏好並未完全趨同，這正是在地回應壓力存在的原因" },
-      { q: "Boeing 787 的零組件來自多個國家是什麼現象的例子？", opts: ["垂直整合","國際價值鏈碎片化","多國策略","水平多角化"], ans: 1, exp: "Boeing 787 展示了如何將價值鏈各階段分散到全球最適地點" },
-      { q: "Pankaj Ghemawat 所稱的 arbitrage 主要是指？", opts: ["在不同市場間進行價格套利","利用國家間資源差異創造價值","透過全球品牌統一降低成本","建立全球統一的管理系統"], ans: 1, exp: "Ghemawat 的套利概念是利用國家間在資源、成本與知識上的差異來創造價值" }
-    ],
-
-    m2_nav: "2. 國家競爭優勢", m2_title: "國家競爭優勢：Porter 鑽石模型",
-    m2_p1: "Michael Porter 的國家鑽石模型（National Diamond）提出四個影響一國在特定產業能否建立國際競爭優勢的關鍵因素：要素條件、需求條件、相關與支援產業，以及企業策略/結構/競爭態勢。這四個因素彼此互動，形成動態的競爭環境。",
-    m2_p2: "「一個國家在特定產業能否取得國際成功，取決於鑽石模型中四個因素的互動結果。」— Porter 的核心論點",
-    m2_p3: "比較優勢理論指出，一個國家在那些密集使用其豐富資源的產品上具有比較優勢。例如孟加拉的勞力密集成衣業、美國的技術密集半導體產業。但 Porter 進一步強調，高度專業化、自主培育的資源（而非天賦資源）才是國際競爭力的關鍵。",
-    m2_p4: "策略與國家條件之間需要一致性。美國半導體企業聚焦高端微處理器設計而非製造；義大利鞋業強調工藝與風格；越南鞋業利用低成本勞工大量生產。企業策略必須與母國的比較優勢相互配合。",
-    m2_cards: [
-      { title: "要素條件", desc: "勞動力、資本、基礎設施、科學技術等。Porter 強調高度專業化的「自生」資源比天賦資源更為關鍵" },
-      { title: "需求條件", desc: "挑剔的本國消費者驅動創新與品質提升。如瑞士人的守時促成鐘錶業、德國人對工程品質的偏好助長高性能汽車業" },
-      { title: "相關與支援產業", desc: "產業群聚效應。矽谷的半導體、軟體與創投企業構成互利的產業叢聚" },
-      { title: "企業策略與競爭", desc: "激烈的國內競爭驅動創新與效率。日本汽車業的多家巨頭競爭促成全球領先地位" }
-    ],
-    m2_terms: [
-      { front: "比較優勢\nComparative Advantage", back: "一個國家在密集使用其豐富資源的產品上具有相對效率優勢，透過貿易表現反映出來" },
-      { front: "Porter 鑽石模型\nPorter's National Diamond", back: "四因素架構：要素條件、需求條件、相關支援產業、企業策略與競爭，解釋一國在特定產業的國際競爭優勢" },
-      { front: "產業群聚\nIndustrial Cluster", back: "地理集中的相關企業與機構彼此互利合作，形成競爭優勢的生態系統，如矽谷、丹麥風電產業" }
-    ],
-    m2_q: [
-      { q: "Porter 鑽石模型的四個因素不包含以下哪一項？", opts: ["要素條件","需求條件","匯率波動","企業策略與競爭"], ans: 2, exp: "鑽石模型四要素為：要素條件、需求條件、相關與支援產業、企業策略/結構/競爭" },
-      { q: "瑞士鐘錶業的全球競爭力最能用鑽石模型的哪個因素解釋？", opts: ["要素條件","需求條件","政府政策","交通運輸"], ans: 1, exp: "瑞士人對守時的極致追求創造了嚴苛的需求條件，驅動鐘錶業精益求精" },
-      { q: "矽谷的半導體、軟體與創投企業密集聚集，最能說明鑽石模型的哪個因素？", opts: ["要素條件","需求條件","相關與支援產業","企業策略與競爭"], ans: 2, exp: "矽谷是典型的產業群聚，相關產業間彼此提供關鍵資源與能力" },
-      { q: "比較優勢理論的核心主張是什麼？", opts: ["所有國家都應發展高科技產業","一國在密集使用其豐富資源的產品上具有相對優勢","大國比小國更具貿易優勢","政府補貼決定比較優勢"], ans: 1, exp: "比較優勢指一國在密集使用其豐富資源的產品上具有相對效率優勢" },
-      { q: "Porter 認為什麼類型的資源對建立國際競爭優勢最關鍵？", opts: ["天然資源稟賦","高度專業化的自生資源","廉價勞動力","政府提供的補貼"], ans: 1, exp: "Porter 強調高度專業化、自主培育的資源比天賦資源更關鍵" },
-      { q: "日本汽車業在 20 世紀末的全球成功，鑽石模型會如何解釋？", opts: ["豐富的石油資源","多家大型企業在國內激烈競爭","政府限制外國汽車進口","日本消費者不重視品質"], ans: 1, exp: "多家主要生產商的激烈國內競爭驅動了創新、品質與效率" },
-      { q: "美國半導體企業聚焦設計而非製造，這說明了什麼概念？", opts: ["垂直整合","策略與國家條件的一致性","多角化","經驗曲線"], ans: 1, exp: "企業策略須與母國的比較優勢相配合，美國優勢在技術人才而非低成本製造" },
-      { q: "歐洲在許多高科技產業的失敗，Porter 認為可能原因是？", opts: ["缺乏資金","政府傾向扶植國家冠軍企業而消滅國內競爭","語言障礙","地理位置不佳"], ans: 1, exp: "Porter 認為政府扶植國家冠軍企業會消滅國內競爭，削弱創新動力" }
-    ],
-
-    m3_nav: "3. 進入模式", m3_title: "海外市場進入模式",
-    m3_p1: "企業進入海外市場的方式構成一個從低承諾到高承諾的策略光譜。非股權模式包括出口（直接/間接）和契約安排（授權、加盟、統包工程、研發合約、共同行銷）；股權模式（FDI）包括合資企業（少數/50-50/多數）與獨資子公司（綠地投資或收購）。",
-    m3_p2: "「選擇進入模式時須考量五個關鍵因素：競爭優勢是基於企業特定還是國家特定資源、產品是否可交易、企業是否具備海外成功所需的全部資源與能力、能否直接佔有資源報酬、以及交易成本。」",
-    m3_p3: "eBay 在歐洲及拉丁美洲透過合資與收購成功擴張，但在亞洲市場卻因缺乏在地市場知識、產品本土化不足及管理過度集中化而挫敗，最終輸給了更懂在地需求的 Alibaba。這說明進入模式的選擇必須考量在地市場的獨特性。",
-    m3_cards: [
-      { title: "出口 Export", desc: "利用區位與經驗曲線優勢，但面臨高運輸成本、貿易障礙與當地經銷商管理問題" },
-      { title: "授權 Licensing", desc: "低開發成本與風險，但無法實現區位經濟、全球策略協調，且有技術控制流失風險" },
-      { title: "合資 Joint Venture", desc: "可獲得在地夥伴知識、分攤成本與風險，但可能有政治依賴及技術控制問題" },
-      { title: "獨資子公司 WOS", desc: "技術保護最強，可實現全球策略協調與區位經濟，但成本與風險最高" }
-    ],
-    m3_terms: [
-      { front: "加盟 Franchising", back: "加盟者銷售無形資產（品牌、商業模式）並要求加盟主遵守經營規範。低開發成本但品質控制較困難" },
-      { front: "合資企業 Joint Venture", back: "通常為 50/50 股權合作，是進入新市場的偏好模式。可取得在地知識但可能犧牲策略控制" },
-      { front: "綠地投資 Greenfield", back: "在外國從零開始建立子公司，屬獨資子公司（WOS）的一種。控制力最強但建設期長、投資高" }
-    ],
-    m3_q: [
-      { q: "進入模式中，控制程度最高的是哪一種？", opts: ["出口","授權","合資","獨資子公司"], ans: 3, exp: "獨資子公司母公司持有 100% 股權，控制程度最高" },
-      { q: "以下何者是授權模式的主要缺點？", opts: ["運輸成本高","無法控制技術與全球策略協調","投資金額太大","需要大量管理人才外派"], ans: 1, exp: "授權模式的主要缺點在於技術控制流失與無法進行全球策略協調" },
-      { q: "Starbucks 自營門市而 McDonald's 採用加盟，主要原因是什麼？", opts: ["Starbucks 資金更多","Starbucks 的體驗難以契約化","McDonald's 品牌更強","法律規定不同"], ans: 1, exp: "Starbucks 的價值在於難以言明的體驗氛圍，不易寫入加盟合約" },
-      { q: "eBay 在亞洲失敗的主要原因不包含？", opts: ["缺乏在地市場知識","管理過度集中化","產品本土化不足","貿易障礙太高"], ans: 3, exp: "eBay 在亞洲的問題在於對在地市場了解不足、產品缺乏本土創新、以及管理過於集權" },
-      { q: "合資企業作為進入模式的優勢包括？", opts: ["完全控制技術","取得在地夥伴知識並分攤成本","無需投入任何資本","可完全避免政治風險"], ans: 1, exp: "合資的核心優勢是取得在地知識、分攤開發成本與風險" },
-      { q: "企業的競爭優勢若基於國家特定資源，最適合的進入模式是？", opts: ["獨資子公司","合資","出口","加盟"], ans: 2, exp: "若競爭優勢來自母國的成本優勢，企業必須在母國生產並出口" },
-      { q: "交易成本在進入模式決策中的角色是什麼？", opts: ["只影響出口決策","決定授權 vs. 直接投資的選擇","與進入模式無關","只有政府才需考慮"], ans: 1, exp: "交易成本（如關稅、合約監督成本）是選擇授權或直接投資的關鍵考量" },
-      { q: "策略聯盟在進入模式架構中涵蓋哪些範圍？", opts: ["僅限授權","僅限合資","橫跨契約安排與合資兩大類","僅限獨資子公司"], ans: 2, exp: "策略聯盟的範圍橫跨契約安排（授權、共同行銷等）與合資企業" }
-    ],
-
-    m4_nav: "4. 跨國策略", m4_title: "跨國策略選擇：全球整合 vs. 在地回應",
-    m4_p1: "跨國策略的核心張力在於全球整合壓力（供給面：成本降低需求）與在地回應壓力（需求面：消費者偏好、通路、法規差異）之間的取捨。整合-回應架構將策略分為四種類型：國際策略（Home Replication）、全球策略（Global Standardization）、多國策略（Multi-domestic）與跨國策略（Transnational）。",
-    m4_p2: "「在消費偏好同質化且規模經濟龐大的產業（如噴射引擎），應採全球策略；在國家偏好顯著且回應成本可控的產業（如零售銀行），適合多國策略。」— 整合-回應架構的判斷邏輯",
-    m4_p3: "Ghemawat 的 CAGE 架構從文化、行政/政治、地理、經濟四個維度衡量國家間距離。McDonald's 的「全球在地化」是平衡全球標準化與在地適應的典範：Big Mac 全球統一，但印度提供 McAloo Tikki，法國提供 Croque McDo，各國菜單兼顧在地口味。",
-    m4_p4: "調和全球效率與在地適應需要依產品與功能拆解公司。R&D、採購和 IT 適合全球化整合；銷售、行銷和人力資源需要更高的在地差異化。P&G 對 Pringles 採全球標準化，對洗髮精和洗衣精則允許顯著的國家差異。",
-    m4_cards: [
-      { title: "國際策略", desc: "母國複製模式。核心能力集中、其他分散至各國單位。整合與回應壓力皆低" },
-      { title: "全球策略", desc: "標準化模式。權力集中在全球最適位置，採全球產品事業部結構。整合壓力高、回應壓力低" },
-      { title: "多國策略", desc: "在地化模式。權力下放至各國單位，採地區結構。整合壓力低、回應壓力高" },
-      { title: "跨國策略", desc: "同時集中化與分散化，採全球矩陣結構。整合與回應壓力皆高，協調成本最高" }
-    ],
-    m4_terms: [
-      { front: "整合-回應架構\nI-R Framework", back: "以全球整合壓力（成本降低）和在地回應壓力（差異化需求）兩個維度劃分四種跨國策略的經典架構" },
-      { front: "CAGE 距離架構\nCAGE Framework", back: "Ghemawat 提出的四維度國家距離分析：文化（Cultural）、行政（Administrative）、地理（Geographic）、經濟（Economic）距離" },
-      { front: "全球在地化\nGlocalization", back: "標準化可獲得規模經濟的部分，在地化消費者偏好最強且成本可控的部分。如 Honda Civic 在 110 個國家銷售但各有在地調整" }
-    ],
-    m4_q: [
-      { q: "整合-回應架構中，全球整合壓力與在地回應壓力都高的策略是？", opts: ["國際策略","全球策略","多國策略","跨國策略"], ans: 3, exp: "跨國策略同時面對高全球整合與高在地回應壓力" },
-      { q: "以下哪個產業最適合全球標準化策略？", opts: ["零售銀行","噴射引擎","殯葬服務","在地餐飲"], ans: 1, exp: "噴射引擎規模經濟龐大且客戶偏好高度同質化，適合全球策略" },
-      { q: "CAGE 架構的 'A' 代表什麼？", opts: ["Arbitrage","Administrative","Aggregation","Advantage"], ans: 1, exp: "CAGE 中的 A 代表 Administrative（行政/政治）距離" },
-      { q: "McDonald's 在印度不供應牛肉或豬肉，這說明了什麼策略考量？", opts: ["成本降低","全球標準化","在地文化回應","品牌弱化"], ans: 2, exp: "這是因應在地文化（宗教飲食禁忌）的典型在地回應" },
-      { q: "P&G 對 Pringles 採全球標準化但對洗髮精允許國家差異，這屬於什麼做法？", opts: ["依產品拆解全球化程度","全面在地化","全面標準化","退出低回報市場"], ans: 0, exp: "P&G 依不同產品線的特性決定標準化或在地化程度" },
-      { q: "Ghemawat 的 AAA 架構中，哪一個 A 指利用國家間差異創造價值？", opts: ["Aggregation","Adaptation","Arbitrage","Association"], ans: 2, exp: "Arbitrage 指利用國家間在資源、成本和知識上的差異來創造價值" },
-      { q: "多國策略（Multi-domestic）的權力分配特點是？", opts: ["全部集中在母國","權力下放至各國單位","同時集中與分散","無需管理國際業務"], ans: 1, exp: "多國策略將權力下放至各國單位以最大化在地回應" },
-      { q: "調和全球效率與在地適應時，以下哪個功能最適合全球整合？", opts: ["銷售","人力資源","研發","客戶服務"], ans: 2, exp: "R&D 具有最大的全球化整合潛力；銷售和人力資源需要更多在地差異化" }
-    ],
-
-    m5_nav: "5. 跨國組織", m5_title: "跨國組織設計",
-    m5_p1: "Bartlett & Ghoshal 辨識出三個跨國企業發展時代：20 世紀初的歐洲跨國企業（分散聯邦）如 Unilever、Philips，各國子公司高度自主；二戰後的美國跨國企業（協調聯邦）如 GM、IBM，子公司自主但以美國母公司為技術與資金核心；1970-80 年代的日本挑戰（集中樞紐）如 Toyota、Matsushita，研發與製造集中在日本。",
-    m5_p2: "「跨國公司是其歷史的俘虜：當初國際擴張時做出的策略-結構選擇，持續形塑其能力與限制。」— Bartlett & Ghoshal 的管理遺產論",
-    m5_p3: "理想的跨國組織（Transnational）是一個整合網絡：每個國家單位都是為全體組織貢獻創意與能力的來源；各國單位可被指派全球範圍的產品或活動責任以取得規模經濟；總部的角色是建立組織脈絡以促進協調，而非直接管控。",
-    m5_p4: "四種策略各有對應的組織結構：多國策略→地區結構，國際策略→國際事業部結構，全球策略→全球產品事業部結構，跨國策略→全球矩陣（或「心中的矩陣」）。跨國策略的協調需求最高，組織文化最為重要。",
-    m5_cards: [
-      { title: "歐洲模式：分散聯邦", desc: "各國子公司高度自主，完整執行從研發到行銷的全部功能。優勢是在地適應力強，挑戰是整合不足" },
-      { title: "美國模式：協調聯邦", desc: "子公司有一定自主權但以美國母公司為核心。擅長移轉技術與新產品至各國子公司" },
-      { title: "日本模式：集中樞紐", desc: "研發與製造集中在日本，海外子公司負責銷售與配銷。全球標準化產品提供無與倫比的成本與品質優勢" },
-      { title: "跨國網絡：整合網路", desc: "各國子公司提供差異化貢獻，知識聯合開發與全球共享。是最複雜但也最強大的組織形態" }
-    ],
-    m5_terms: [
-      { front: "管理遺產\nAdministrative Heritage", back: "跨國企業在國際擴張時形成的資產配置、管理職責與關係網絡，深刻影響其當前能力與轉型限制" },
-      { front: "跨國組織\nTransnational Organization", back: "Bartlett & Ghoshal 提出的理想型態：整合的分散網絡，各國單位貢獻獨特能力，知識在多方向間流動" },
-      { front: "全球矩陣\nGlobal Matrix", back: "同時以產品事業部與地區單位雙軸組織的結構，對應跨國策略，協調需求與組織文化重要性最高" }
-    ],
-    m5_q: [
-      { q: "Bartlett & Ghoshal 的分散聯邦模式最能描述哪類跨國企業？", opts: ["日本跨國企業","美國跨國企業","20 世紀初的歐洲跨國企業","新興市場跨國企業"], ans: 2, exp: "分散聯邦是 20 世紀初歐洲跨國企業的典型模式" },
-      { q: "以下哪項是跨國組織（Transnational）的核心特徵？", opts: ["所有決策集中在母國","各國子公司完全獨立運作","整合網絡中知識聯合開發並全球共享","僅以出口方式服務海外市場"], ans: 2, exp: "跨國組織的核心是整合網絡，知識在多方向間流動" },
-      { q: "四種策略中，組織文化重要性最高的是？", opts: ["多國策略","國際策略","全球策略","跨國策略"], ans: 3, exp: "跨國策略的協調複雜度最高，組織文化的凝聚力最為重要" },
-      { q: "日本集中樞紐模式的主要優勢是什麼？", opts: ["在地回應能力強","全球標準化帶來的成本與品質優勢","快速取得在地市場知識","組織文化最靈活"], ans: 1, exp: "集中在日本的研發與製造提供全球標準化產品的成本與品質優勢" },
-      { q: "知識管理方面，多國策略的知識流動特點是？", opts: ["知識在母公司開發並移轉至子公司","知識在各子公司獨立開發並留在當地","知識在多方向間廣泛流動","知識集中在總部與關鍵據點"], ans: 1, exp: "多國策略下知識在各子公司獨立開發並留在當地，跨國流動有限" },
-      { q: "Philips 將醫療電子責任交給美國子公司說明了什麼趨勢？", opts: ["撤離歐洲市場","將全球產品事業部管理權設在母國以外","放棄醫療電子事業","從跨國轉向多國策略"], ans: 1, exp: "越來越多跨國企業將全球產品事業部控制權設在母國以外的最適地點" },
-      { q: "McKinsey 研究發現跨國企業相較國家冠軍企業面臨哪個挑戰？", opts: ["技術落後","全球化罰金：難以建立共享願景與在地關係","資金不足","品牌知名度低"], ans: 1, exp: "跨國企業在建立共享願景、維持專業標準、以及經營在地關係方面面臨困難" },
-      { q: "管理遺產（Administrative Heritage）的含義是？", opts: ["企業的財務報表歷史","國際擴張時形成的策略-結構配置持續影響當前能力","管理階層的年齡結構","行政流程的自動化程度"], ans: 1, exp: "管理遺產指國際擴張時的選擇如何持續形塑企業的能力與限制" }
-    ],
-
-    m6_nav: "6. 外部資源", m6_title: "延伸學習資源", m6_desc: "精選的學術與實務資源，幫助您深入探索地理區域擴張策略",
-    mlab_nav: "7. 互動實驗室", mlab_title: "互動實驗室", mlab_desc: "透過互動模擬器與視覺化工具，直觀理解關鍵策略架構",
-    mlab_labs: [
-      { title: "整合-回應架構模擬器", desc: "調整兩個維度的壓力值，觀察策略定位如何改變" },
-      { title: "進入模式比較器", desc: "比較五種進入模式在控制、承諾與風險維度上的差異" },
-      { title: "Porter 鑽石模型模擬器", desc: "調整四個因素的強度，觀察鑽石形狀的動態變化" },
-      { title: "全球價值鏈分布", desc: "探索價值鏈各階段在全球的最適配置地點" },
-      { title: "國際營收佔比", desc: "互動比較知名跨國企業的國際營收佔總營收比例" },
-      { title: "CAGE 距離架構", desc: "點擊探索文化、行政、地理、經濟四維度的國家距離" }
-    ],
-
-    date: "Version 2026.03.29",
-    copyright: "For Educational Use Only",
-    architect_label: "Architect:",
-    architect_name: "Prof. Shihmin Lo",
-    architect_url: "https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
-  },
-  en: {
-    brand: "GE",
-    title: "Corp Strategy: Geographical Expansion",
-    subtitle: "集團策略：地理區域擴張",
-    nav_modules: "Module Directory", nav_prev: "Previous", nav_next: "Next",
-    key_terms: "Key Terms", flip_prompt: "Click to flip", audio_read: "Audio Guide",
-    quiz_title: "Module Quiz (Random 4 Questions)",
-    submit: "Submit", retry: "Retry",
-    score: "Score", correct: "Correct", incorrect: "Incorrect", explanation: "Explanation",
-
-    analytics_title: "Learning Analytics", analytics_desc: "Track your learning progress, engagement, and quiz performance",
-    analytics_form_title: "Student Info",
-    analytics_group: "Group", analytics_dept: "Department",
-    analytics_dept_ph: "e.g. IBS3", analytics_id: "Student ID", analytics_id_ph: "e.g. 112212099",
-    analytics_name: "Name", analytics_name_ph: "e.g. Jimmy Lo",
-    analytics_export_csv: "Export CSV Learning Record",
-    analytics_fill_required: "Please fill in all fields to unlock export",
-    group_options: ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","Others"],
-    analytics_total_time: "Total Study Time", analytics_total_clicks: "Total Interactions",
-    analytics_overall_acc: "Overall Quiz Accuracy",
-    analytics_module: "Module", analytics_time: "Time Spent",
-    analytics_clicks: "Clicks", analytics_acc: "Accuracy",
-    analytics_correct_ans_total: "Correct / Answered / Total",
-    analytics_no_data: "Not attempted", analytics_sec: "sec", analytics_times: "times",
-
-    m0_nav: "0. Overview",
-    m0_title: "Geographical Expansion Strategy", m0_intro: "This module explores how firms pursue growth through internationalization: why go global, how to choose entry modes, how to balance global integration with local responsiveness, and multinational organizational design. Combining Porter's Diamond, the Integration-Responsiveness framework and other classic theories, we build a systematic analytical framework for multinational decision-making.",
-    m0_why: "Why Does Geographical Expansion Matter?", m0_why_desc: "Internationalization is both enormous opportunity and potent destroyer. Embraer rose from a struggling Brazilian state firm to the world's third-biggest plane maker; Sheffield's centuries-old cutlery industry was devastated by low-cost Asian competition. Understanding expansion strategy is a core competency for modern managers.",
-    m0_modules: [
-      { num: "01", title: "Why Go Global", desc: "Core competence transfer, location economies, experience curve benefits" },
-      { num: "02", title: "National Competitive Advantage", desc: "Porter's Diamond and comparative advantage theory" },
-      { num: "03", title: "Foreign Market Entry Modes", desc: "The strategic spectrum from exporting to wholly owned subsidiaries" },
-      { num: "04", title: "Multinational Strategy Choices", desc: "Global integration vs. local responsiveness framework" },
-      { num: "05", title: "Multinational Organization Design", desc: "Evolution of European, American, and Japanese MNCs" }
-    ],
-    m0_stats: [
-      { val: "5", label: "Learning Modules" },
-      { val: "40", label: "Quiz Questions" },
-      { val: "15", label: "Flip Cards" },
-      { val: "6", label: "Interactive Labs" }
-    ],
-    m0_start: "Start Learning →",
-
-    m1_nav: "1. Why Go Global", m1_title: "Why Go Global?",
-    m1_p1: "There are three primary drivers for firms going international: transferring core competencies to foreign markets where local competitors lack similar skills (inside-out); exploiting countries' comparative advantages in production to realize location economies (outside-in); and achieving experience curve economies and scale benefits through global sales volume (as a whole).",
-    m1_p2: "\"Placing a value creation activity in its optimal location may help lower its cost or enable its differentiation — if trade barriers and transportation costs permit.\" — The core logic of location economies",
-    m1_p3: "Five major sources of value from operating internationally include: cost benefits of scale and replication, serving global customers, exploiting national resources through arbitrage, cross-border learning benefits, and strategic cross-market competition. For example, IKEA learned quality standards in Japan then diffused that expertise across its global network.",
-    m1_cards: [
-      { title: "Core Competence Transfer", desc: "Bringing distinctive skills and products to foreign markets where local competitors lack similar capabilities" },
-      { title: "Location Economies", desc: "Placing value chain activities in countries with comparative advantage to lower costs or enhance differentiation" },
-      { title: "Experience Curve Benefits", desc: "Achieving scale economies and learning effects through expanded global sales volume, reducing unit costs" },
-      { title: "Arbitrage Benefits", desc: "Exploiting differences between countries in wages, technology, and knowledge to create value" }
-    ],
-    m1_terms: [
-      { front: "Core Competence Transfer\n核心能力移轉", back: "Exploiting distinctive skills and products in foreign markets where indigenous competitors lack similar capabilities (inside-out logic)" },
-      { front: "Location Economies\n區位經濟", back: "Configuring value chain activities across countries to exploit each nation's comparative advantage for cost reduction or differentiation (outside-in logic)" },
-      { front: "Experience Curve Economies\n經驗曲線效益", back: "Reducing unit costs through global sales volume by leveraging scale economies and learning effects" }
-    ],
-    m1_q: [
-      { q: "When a firm brings its core competencies to foreign markets lacking similar capabilities, this is called?", opts: ["Location economies","Core competence transfer (inside-out)","Experience curve","Diversification"], ans: 1, exp: "Core competence transfer involves exploiting distinctive skills in foreign markets where competitors lack similar capabilities" },
-      { q: "Which best describes 'location economies'?", opts: ["Replicating identical production everywhere","Placing value activities in optimal locations to reduce costs","Expanding global sales for scale benefits","Acquiring local firms for market access"], ans: 1, exp: "Location economies involve configuring value chain activities across countries based on comparative advantage" },
-      { q: "Experience curve economies primarily reduce costs through what mechanism?", opts: ["Diversifying risk","Government subsidies","Scale economies and learning effects","Technology licensing"], ans: 2, exp: "Global sales volume enables scale economies and learning effects that reduce unit production costs" },
-      { q: "Nike shifting manufacturing from Japan to Taiwan to China to Vietnam best illustrates?", opts: ["Core competence transfer","Brand differentiation","Arbitrage strategy","Technology innovation"], ans: 2, exp: "Nike's pursuit of low-cost locations is a classic example of exploiting resource differences between countries" },
-      { q: "IKEA transferring quality capabilities developed in Japan to its global network represents?", opts: ["Scale economies","Serving global customers","Cross-border learning benefits","Strategic competition"], ans: 2, exp: "Cross-border learning benefits involve integrating experiences from one country and diffusing them globally" },
-      { q: "Which is NOT a major enabler of globalization?", opts: ["Advances in transport and ICT","Reduced cross-border trade barriers","Complete convergence of consumer preferences","Liberalization of foreign direct investment"], ans: 2, exp: "Consumer preferences have not fully converged — this is precisely why local responsiveness pressures persist" },
-      { q: "The Boeing 787 sourcing components from many countries exemplifies?", opts: ["Vertical integration","International value chain fragmentation","Multi-domestic strategy","Horizontal diversification"], ans: 1, exp: "The 787 demonstrates distributing value chain stages to optimal global locations" },
-      { q: "Ghemawat's concept of 'arbitrage' primarily refers to?", opts: ["Price arbitrage across markets","Exploiting resource differences between countries","Reducing costs through global branding","Building unified management systems"], ans: 1, exp: "Ghemawat's arbitrage concept is about exploiting differences between countries in resources, costs, and knowledge" }
-    ],
-
-    m2_nav: "2. National Advantage", m2_title: "National Competitive Advantage: Porter's Diamond",
-    m2_p1: "Michael Porter's National Diamond framework identifies four factors determining whether firms from a particular country can establish international competitive advantage: factor conditions, demand conditions, related and supporting industries, and firm strategy/structure/rivalry. These four factors interact dynamically to shape the competitive environment.",
-    m2_p2: "\"A nation is likely to achieve international success in a certain industry as a function of the four factors shown in the diamond model.\" — Porter's core proposition",
-    m2_p3: "Comparative advantage theory states that a country has comparative advantage in products that intensively use its abundant resources. Bangladesh excels in labor-intensive garments; the US leads in technology-intensive semiconductors. Porter goes further, emphasizing that highly specialized, 'home-grown' resources matter more than natural endowments for international competitiveness.",
-    m2_p4: "Strategy must be consistent with national conditions. US semiconductor firms focus on advanced chip design rather than fabrication; Italian shoemakers emphasize style and craftsmanship; Vietnam's shoe industry leverages low-cost labor for mass production. Business strategy must align with the home country's comparative advantage.",
-    m2_cards: [
-      { title: "Factor Conditions", desc: "Labor, capital, infrastructure, scientific resources. Porter emphasizes specialized 'home-grown' resources over natural endowments" },
-      { title: "Demand Conditions", desc: "Demanding domestic consumers drive innovation and quality. Swiss punctuality breeds watchmaking; German engineering passion drives premium autos" },
-      { title: "Related & Supporting Industries", desc: "Cluster effects. Silicon Valley's semiconductor, software, and venture capital firms form a mutually reinforcing ecosystem" },
-      { title: "Strategy, Structure & Rivalry", desc: "Intense domestic competition drives innovation and efficiency. Multiple Japanese auto giants competing domestically fueled global leadership" }
-    ],
-    m2_terms: [
-      { front: "Comparative Advantage\n比較優勢", back: "A country's relative efficiency advantage in products that intensively use its abundantly available resources, revealed through trade performance" },
-      { front: "Porter's National Diamond\nPorter 鑽石模型", back: "Four-factor framework: factor conditions, demand conditions, related/supporting industries, and strategy/structure/rivalry explaining national competitive advantage in specific industries" },
-      { front: "Industrial Cluster\n產業群聚", back: "Geographically concentrated related firms and institutions that cooperate and compete, forming a competitive ecosystem (e.g., Silicon Valley, Danish wind power)" }
-    ],
-    m2_q: [
-      { q: "Which is NOT one of Porter's Diamond four factors?", opts: ["Factor conditions","Demand conditions","Exchange rate fluctuations","Firm strategy and rivalry"], ans: 2, exp: "The four Diamond factors are: factor conditions, demand conditions, related/supporting industries, firm strategy/structure/rivalry" },
-      { q: "Swiss watchmaking competitiveness is best explained by which Diamond factor?", opts: ["Factor conditions","Demand conditions","Government policy","Transportation"], ans: 1, exp: "Swiss obsessive punctuality creates demanding demand conditions driving watchmaking excellence" },
-      { q: "Silicon Valley's concentration of semiconductor, software, and VC firms illustrates?", opts: ["Factor conditions","Demand conditions","Related and supporting industries","Firm strategy and rivalry"], ans: 2, exp: "Silicon Valley is a classic industrial cluster where related industries provide critical resources to each other" },
-      { q: "What is the core claim of comparative advantage theory?", opts: ["All countries should develop high-tech industries","A country has advantage in products using its abundant resources intensively","Large countries have more trade advantages","Government subsidies determine comparative advantage"], ans: 1, exp: "Comparative advantage states that a country excels in products that intensively use its abundantly available resources" },
-      { q: "According to Porter, what type of resources is most critical for international competitiveness?", opts: ["Natural resource endowments","Highly specialized, home-grown resources","Cheap labor","Government subsidies"], ans: 1, exp: "Porter emphasizes that specialized, self-developed resources matter more than natural endowments" },
-      { q: "How would the Diamond model explain Japan's auto industry global success?", opts: ["Abundant oil resources","Multiple major firms competing intensely domestically","Government import restrictions on foreign cars","Japanese consumers don't care about quality"], ans: 1, exp: "Intense domestic competition among multiple producers drove innovation, quality, and efficiency" },
-      { q: "US semiconductor firms focusing on design rather than fabrication illustrates?", opts: ["Vertical integration","Consistency between strategy and national conditions","Diversification","Experience curve"], ans: 1, exp: "Firm strategy must align with national comparative advantage — US advantage is in technical talent, not low-cost manufacturing" },
-      { q: "Porter suggests European failure in hi-tech industries may result from?", opts: ["Lack of capital","Governments creating national champions that kill domestic competition","Language barriers","Poor geographical location"], ans: 1, exp: "Porter argues that government-backed national champions can destroy domestic competition and weaken innovation" }
-    ],
-
-    m3_nav: "3. Entry Modes", m3_title: "Foreign Market Entry Modes",
-    m3_p1: "Market entry modes form a strategic spectrum from low to high commitment. Non-equity modes include exports (direct/indirect) and contractual agreements (licensing, franchising, turnkey projects, R&D contracts, co-marketing); equity (FDI) modes include joint ventures (minority/50-50/majority) and wholly owned subsidiaries (greenfield or acquisitions).",
-    m3_p2: "\"Five key factors determine entry mode choice: whether competitive advantage is firm-specific or country-specific, whether the product is tradable, whether the firm has all resources needed for overseas success, whether it can directly appropriate returns to its resources, and transaction costs involved.\"",
-    m3_p3: "eBay successfully expanded into Europe and Latin America through JVs and acquisitions, but struggled in Asia due to limited local market knowledge, insufficient product localization, and overly centralized management, ultimately losing to Alibaba which better understood local needs. This demonstrates that entry mode choices must account for local market uniqueness.",
-    m3_cards: [
-      { title: "Export", desc: "Leverages location and experience curve advantages, but faces high transport costs, trade barriers, and local agent management issues" },
-      { title: "Licensing", desc: "Low development costs and risks, but cannot realize location economies, global strategic coordination, and risks losing technology control" },
-      { title: "Joint Venture", desc: "Access to local partner knowledge, shared costs and risks, but may face political dependency and technology control issues" },
-      { title: "Wholly Owned Subsidiary", desc: "Strongest technology protection, enables global coordination and location economies, but highest costs and risks" }
-    ],
-    m3_terms: [
-      { front: "Franchising\n加盟", back: "Franchisor sells intangible property (brand, business system) and requires franchisee to follow operating rules. Low development cost but quality control challenges" },
-      { front: "Joint Venture\n合資企業", back: "Typically a 50/50 equity partnership and favored mode for entering new markets. Provides local knowledge access but may sacrifice strategic control" },
-      { front: "Greenfield Investment\n綠地投資", back: "Building a subsidiary from scratch in a foreign country, a type of wholly owned subsidiary (WOS). Maximum control but long setup time and high investment" }
-    ],
-    m3_q: [
-      { q: "Which entry mode provides the highest level of control?", opts: ["Exporting","Licensing","Joint venture","Wholly owned subsidiary"], ans: 3, exp: "Wholly owned subsidiaries provide 100% ownership and maximum control" },
-      { q: "What is the main disadvantage of licensing?", opts: ["High transport costs","Loss of technology control and inability to coordinate globally","Excessive capital investment","Requires many expatriate managers"], ans: 1, exp: "Licensing's key drawbacks are loss of technology control and inability to engage in global strategic coordination" },
-      { q: "Why does Starbucks own its stores while McDonald's uses franchising?", opts: ["Starbucks has more capital","The Starbucks experience is hard to contractualize","McDonald's brand is stronger","Different legal requirements"], ans: 1, exp: "Starbucks' value lies in an intangible experience ambiance that's difficult to write into franchise contracts" },
-      { q: "eBay's failure in Asia was NOT caused by?", opts: ["Limited local market knowledge","Overly centralized management","Insufficient product localization","Trade barriers being too high"], ans: 3, exp: "eBay's problems in Asia were limited local knowledge, lack of local innovation, and overly centralized management" },
-      { q: "Advantages of joint ventures as entry mode include?", opts: ["Complete technology control","Access to local knowledge and shared costs/risks","No capital investment required","Complete avoidance of political risk"], ans: 1, exp: "JVs' core advantages are accessing local knowledge and sharing development costs and risks" },
-      { q: "If competitive advantage is based on country-specific resources, the best entry mode is?", opts: ["Wholly owned subsidiary","Joint venture","Exporting","Franchising"], ans: 2, exp: "If advantage comes from home country cost base, the firm must produce domestically and export" },
-      { q: "What role do transaction costs play in entry mode decisions?", opts: ["Only affect export decisions","Determine the choice between licensing and direct investment","Irrelevant to entry modes","Only governments need to consider them"], ans: 1, exp: "Transaction costs (tariffs, contract monitoring costs) are key in choosing between licensing and FDI" },
-      { q: "Strategic alliances in the entry mode framework span which scope?", opts: ["Only licensing","Only joint ventures","Across contractual agreements and joint ventures","Only wholly owned subsidiaries"], ans: 2, exp: "Strategic alliances span both contractual agreements (licensing, co-marketing, etc.) and joint ventures" }
-    ],
-
-    m4_nav: "4. MNC Strategies", m4_title: "Multinational Strategy: Global Integration vs. Local Responsiveness",
-    m4_p1: "The core tension in multinational strategy is the tradeoff between global integration pressures (supply side: cost reduction) and local responsiveness pressures (demand side: consumer preferences, distribution channels, regulations). The Integration-Responsiveness framework classifies strategies into four types: International (Home Replication), Global (Standardization), Multi-domestic (Localization), and Transnational.",
-    m4_p2: "\"Industries where scale economies are huge and customer preferences homogeneous call for a global strategy (e.g., jet engines). Industries where national preferences are pronounced favor multidomestic strategies (e.g., retail banking).\" — The I-R framework logic",
-    m4_p3: "Ghemawat's CAGE framework measures country distance along four dimensions: Cultural, Administrative/Political, Geographic, and Economic. McDonald's 'glocalization' exemplifies balancing global standardization with local adaptation: Big Mac is globally uniform, but India offers McAloo Tikki, France offers Croque McDo, and menus across countries accommodate local tastes.",
-    m4_p4: "Reconciling global efficiency with local adaptation requires disaggregating the company by product and function. R&D, purchasing, and IT have strong globalization potential; sales, marketing, and HR need more national differentiation. P&G globally standardizes Pringles but allows significant national variation for hair care and laundry products.",
-    m4_cards: [
-      { title: "International Strategy", desc: "Home replication. Core competencies centralized, others decentralized. Low pressures on both integration and responsiveness" },
-      { title: "Global Strategy", desc: "Standardization model. Authority centralized at optimal global location with global product division structure. High integration, low responsiveness" },
-      { title: "Multi-domestic Strategy", desc: "Localization model. Authority decentralized to national units with geographic area structure. Low integration, high responsiveness" },
-      { title: "Transnational Strategy", desc: "Simultaneously centralized and decentralized with global matrix structure. Both pressures high, coordination costs highest" }
-    ],
-    m4_terms: [
-      { front: "I-R Framework\n整合-回應架構", back: "Classic framework classifying four multinational strategies based on two dimensions: global integration pressure (cost reduction) and local responsiveness pressure (differentiation demands)" },
-      { front: "CAGE Framework\nCAGE 距離架構", back: "Ghemawat's four-dimension country distance analysis: Cultural, Administrative, Geographic, and Economic distance between countries" },
-      { front: "Glocalization\n全球在地化", back: "Standardizing where scale economies are substantial, differentiating where national preferences are strongest. E.g., Honda Civic sold in 110 countries with local adaptations" }
-    ],
-    m4_q: [
-      { q: "In the I-R framework, which strategy faces both high integration and high responsiveness pressures?", opts: ["International","Global","Multi-domestic","Transnational"], ans: 3, exp: "Transnational strategy simultaneously faces high global integration and high local responsiveness pressures" },
-      { q: "Which industry best suits a global standardization strategy?", opts: ["Retail banking","Jet engines","Funeral services","Local restaurants"], ans: 1, exp: "Jet engines have enormous scale economies and highly homogeneous customer requirements" },
-      { q: "What does 'A' in the CAGE framework stand for?", opts: ["Arbitrage","Administrative","Aggregation","Advantage"], ans: 1, exp: "The A in CAGE stands for Administrative (political) distance" },
-      { q: "McDonald's not serving beef or pork in India demonstrates?", opts: ["Cost reduction","Global standardization","Local cultural responsiveness","Brand dilution"], ans: 2, exp: "This is a classic example of adapting to local cultural and religious dietary norms" },
-      { q: "P&G standardizing Pringles globally but allowing national variation for shampoo represents?", opts: ["Disaggregating globalization by product","Full localization","Full standardization","Market exit strategy"], ans: 0, exp: "P&G determines standardization vs. localization degree based on each product line's characteristics" },
-      { q: "In Ghemawat's AAA framework, which 'A' refers to exploiting cross-country differences?", opts: ["Aggregation","Adaptation","Arbitrage","Association"], ans: 2, exp: "Arbitrage means exploiting differences between countries in resources, costs, and knowledge to create value" },
-      { q: "What characterizes Multi-domestic strategy's authority distribution?", opts: ["All centralized at headquarters","Decentralized to national units","Simultaneously centralized and decentralized","No international operations needed"], ans: 1, exp: "Multi-domestic strategy decentralizes authority to national units to maximize local responsiveness" },
-      { q: "Which function is best suited for global integration?", opts: ["Sales","Human resources","R&D","Customer service"], ans: 2, exp: "R&D has the greatest globalization potential; sales and HR require more national differentiation" }
-    ],
-
-    m5_nav: "5. MNC Organization", m5_title: "Multinational Organization Design",
-    m5_p1: "Bartlett & Ghoshal identified three eras of multinational development: early 20th century European MNCs (decentralized federations) like Unilever and Philips with highly autonomous national subsidiaries; post-WWII American MNCs (coordinated federations) like GM and IBM with subsidiaries autonomous but anchored to US headquarters; and 1970s-80s Japanese challengers (centralized hubs) like Toyota and Matsushita with R&D and manufacturing concentrated in Japan.",
-    m5_p2: "\"MNCs are captives of their history: the strategy-structure configurations made at the time of international expansion continue to shape their capabilities and constraints.\" — Bartlett & Ghoshal on administrative heritage",
-    m5_p3: "The ideal transnational organization is an integrated network: each national unit contributes ideas, skills, and capabilities to the whole; units are assigned worldwide product or activity responsibilities for scale economies; headquarters creates organizational context for coordination rather than direct control.",
-    m5_p4: "Each strategy matches a structure: multi-domestic → geographic area, international → international division, global → global product division, transnational → global matrix ('matrix-in-the-mind'). Transnational strategy requires the highest coordination and organizational culture is most critical.",
-    m5_cards: [
-      { title: "European Model: Decentralized Federation", desc: "National subsidiaries highly autonomous, performing all functions from R&D to marketing. Strong local adaptation, challenge is insufficient integration" },
-      { title: "American Model: Coordinated Federation", desc: "Subsidiaries have autonomy but within US HQ's dominant position. Excels at transferring technology and new products to subsidiaries" },
-      { title: "Japanese Model: Centralized Hub", desc: "R&D and manufacturing concentrated in Japan; overseas subsidiaries handle sales and distribution. Unrivalled cost and quality from global standardization" },
-      { title: "Transnational: Integrated Network", desc: "Subsidiaries make differentiated contributions; knowledge developed jointly and shared worldwide. Most complex yet most powerful organizational form" }
-    ],
-    m5_terms: [
-      { front: "Administrative Heritage\n管理遺產", back: "The configuration of assets, capabilities, managerial responsibilities, and relationship networks formed during international expansion, profoundly shaping current capabilities and constraints" },
-      { front: "Transnational Organization\n跨國組織", back: "Bartlett & Ghoshal's ideal type: an integrated distributed network where each unit contributes unique capabilities and knowledge flows multidirectionally" },
-      { front: "Global Matrix\n全球矩陣", back: "Dual-axis structure organized by both product divisions and geographic units, matching transnational strategy with highest coordination needs and cultural importance" }
-    ],
-    m5_q: [
-      { q: "Bartlett & Ghoshal's 'decentralized federation' best describes which MNCs?", opts: ["Japanese MNCs","American MNCs","Early 20th century European MNCs","Emerging market MNCs"], ans: 2, exp: "Decentralized federation is the typical model of early 20th century European multinationals" },
-      { q: "What is the core feature of a transnational organization?", opts: ["All decisions centralized at HQ","National subsidiaries operate independently","Integrated network with jointly developed, globally shared knowledge","Only exports serve overseas markets"], ans: 2, exp: "The transnational's core is an integrated network with multidirectional knowledge flows" },
-      { q: "Among four strategies, which has the highest importance of organizational culture?", opts: ["Multi-domestic","International","Global","Transnational"], ans: 3, exp: "Transnational strategy has the highest coordination complexity, making organizational culture cohesion most critical" },
-      { q: "The main advantage of the Japanese centralized hub model is?", opts: ["Strong local responsiveness","Cost and quality advantages from global standardization","Quick access to local market knowledge","Most flexible organizational culture"], ans: 1, exp: "Concentrated R&D and manufacturing in Japan provided unrivalled cost and quality through global standardization" },
-      { q: "In multi-domestic strategy, knowledge flow is characterized by?", opts: ["Knowledge developed at HQ and transferred to subsidiaries","Knowledge developed and retained within each subsidiary","Knowledge flows extensively in multiple directions","Knowledge concentrated at HQ and key locations"], ans: 1, exp: "Under multi-domestic strategy, knowledge is developed and retained locally with limited cross-border flows" },
-      { q: "Philips assigning medical electronics leadership to its US subsidiary illustrates?", opts: ["Withdrawing from European markets","Locating global product division control outside the home country","Abandoning medical electronics","Shifting from transnational to multi-domestic"], ans: 1, exp: "Increasingly, MNCs locate global product division management outside their home countries at optimal locations" },
-      { q: "McKinsey's research found MNCs face what challenge compared to national champions?", opts: ["Technology lag","Globalization penalty: difficulty building shared vision and local relationships","Insufficient capital","Low brand awareness"], ans: 1, exp: "MNCs struggle with building shared vision, maintaining professional standards, and developing local relationships" },
-      { q: "What does 'administrative heritage' mean?", opts: ["A firm's financial statement history","Strategy-structure configurations from international expansion that continue shaping capabilities","Age structure of management","Level of process automation"], ans: 1, exp: "Administrative heritage refers to how international expansion choices continue to shape a firm's capabilities and constraints" }
-    ],
-
-    m6_nav: "6. Resources", m6_title: "Extended Learning Resources", m6_desc: "Curated academic and practical resources to deepen your exploration of geographical expansion strategies",
-    mlab_nav: "7. Interactive Lab", mlab_title: "Interactive Lab", mlab_desc: "Understand key strategic frameworks intuitively through interactive simulators and visualizations",
-    mlab_labs: [
-      { title: "Integration-Responsiveness Simulator", desc: "Adjust two pressure dimensions and observe how strategy positioning changes" },
-      { title: "Entry Mode Comparator", desc: "Compare five entry modes across control, commitment, and risk dimensions" },
-      { title: "Porter Diamond Simulator", desc: "Adjust four factor intensities and watch the diamond shape change dynamically" },
-      { title: "Global Value Chain Distribution", desc: "Explore optimal locations for each stage of the value chain" },
-      { title: "International Revenue Share", desc: "Interactively compare international revenue ratios of major MNCs" },
-      { title: "CAGE Distance Framework", desc: "Click to explore Cultural, Administrative, Geographic, and Economic distance dimensions" }
-    ],
-
-    date: "Version 2026.03.29",
-    copyright: "For Educational Use Only",
-    architect_label: "Architect:",
-    architect_name: "Prof. Shihmin Lo",
-    architect_url: "https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
-  }
-};
-
-/* ─── App ─── */
+/* ═══════ APP ═══════ */
 function App() {
   const [lang, setLang] = useState('zh');
   const [isDark, setIsDark] = useState(false);
@@ -738,238 +690,141 @@ function App() {
   const menuRef = useRef(null);
   const t = dict[lang];
 
+  const modulesList = [
+    {id:0,icon:"📋",num:"0",title:t.m0_nav,comp:<IconBookOpen size={16}/>},
+    {id:1,icon:"💎",num:"1",title:t.m1_nav,comp:<IconActivity size={16}/>},
+    {id:2,icon:"🗺️",num:"2",title:t.m2_nav,comp:<IconMapPin size={16}/>},
+    {id:3,icon:"🚪",num:"3",title:t.m3_nav,comp:<IconArrowRight size={16}/>},
+    {id:4,icon:"🌐",num:"4",title:t.m4_nav,comp:<IconNavigation size={16}/>},
+    {id:6,icon:"🔗",num:"6",title:t.m6_nav,comp:<IconShare2 size={16}/>},
+    {id:7,icon:"🧪",num:"7",title:t.mlab_nav,comp:<IconZapLab size={16}/>},
+    {id:8,icon:"📊",num:"8",title:lang==='zh'?'8. 學習分析':'8. Analytics',comp:<IconActivity size={16}/>}
+  ];
+
   // Dark mode
-  useEffect(() => { document.documentElement.classList.toggle('dark', isDark); }, [isDark]);
+  useEffect(()=>{ document.documentElement.classList.toggle('dark', isDark); },[isDark]);
 
   // Timer
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setAnalytics(a => { const time = [...a.time]; time[module]++; return {...a, time}; });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [module]);
+  useEffect(()=>{
+    const iv = setInterval(()=>{
+      setAnalytics(a=>{ const nt=[...a.time]; nt[module]++; return {...a,time:nt}; });
+    },1000);
+    return ()=>clearInterval(iv);
+  },[module]);
 
   // Click tracker
   const handleContentClick = () => {
-    setAnalytics(a => { const clicks = [...a.clicks]; clicks[module]++; return {...a, clicks}; });
-  };
-
-  // Menu outside click
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
-
-  // Module switch
-  const switchModule = (m) => {
-    setModule(m);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); setTtsState('idle'); }
+    setAnalytics(a=>{ const nc=[...a.clicks]; nc[module]++; return {...a,clicks:nc}; });
   };
 
   // Quiz submit
-  const handleQuizSubmit = (modId, correct, total) => {
-    setAnalytics(a => {
-      const qc = [...a.quizCorrect]; qc[modId] += correct;
-      const qt = [...a.quizTotal]; qt[modId] = 8;
-      const qa = [...a.quizAnswered]; qa[modId] += total;
-      return {...a, quizCorrect: qc, quizTotal: qt, quizAnswered: qa};
+  const handleQuizSubmit = (mid, correct, answeredCount, totalPool) => {
+    setAnalytics(a=>{
+      const qc=[...a.quizCorrect]; qc[mid]=correct;
+      const qt=[...a.quizTotal]; qt[mid]=totalPool;
+      const qa=[...a.quizAnswered]; qa[mid]=answeredCount;
+      return {...a,quizCorrect:qc,quizTotal:qt,quizAnswered:qa};
     });
   };
 
+  // Module switch
+  const switchModule = (m) => {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    setTtsState('idle');
+    setModule(m);
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  // Close menu on outside click
+  useEffect(()=>{
+    if(!menuOpen)return;
+    const handler=(e)=>{ if(menuRef.current&&!menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown',handler);
+    return ()=>document.removeEventListener('mousedown',handler);
+  },[menuOpen]);
+
   // TTS
   const handleTTS = (action) => {
-    if (!('speechSynthesis' in window)) return;
-    if (action === 'stop') { window.speechSynthesis.cancel(); setTtsState('idle'); return; }
-    if (action === 'pause') { window.speechSynthesis.pause(); setTtsState('paused'); return; }
-    if (action === 'play') {
-      if (ttsState === 'paused') { window.speechSynthesis.resume(); setTtsState('playing'); return; }
+    if(!('speechSynthesis' in window))return;
+    if(action==='stop'){window.speechSynthesis.cancel();setTtsState('idle');return;}
+    if(action==='pause'){window.speechSynthesis.pause();setTtsState('paused');return;}
+    if(action==='play'){
+      if(ttsState==='paused'){window.speechSynthesis.resume();setTtsState('playing');return;}
       window.speechSynthesis.cancel();
-      const sep = lang === 'zh' ? '。 ' : '. ';
-      let texts = [];
-      if (module === 0) {
-        texts = [t.m0_title, t.m0_intro, t.m0_why, t.m0_why_desc, ...(t.m0_stats||[]).map(s=>`${s.label}: ${s.val}`), ...(t.m0_modules||[]).map(m=>`${m.title}. ${m.desc}`)].filter(Boolean);
-      } else if (module >= 1 && module <= 5) {
-        const mk = `m${module}`;
-        texts = [t[`${mk}_title`], ...[1,2,3,4,5].map(n=>t[`${mk}_p${n}`]).filter(Boolean), ...(t[`${mk}_cards`]||[]).map(c=>`${c.title}. ${c.desc}`), ...(t[`${mk}_terms`]||[]).flatMap(term=>[term.front, term.back])].filter(Boolean);
-      } else if (module === 6) {
-        texts = [t.m6_title, t.m6_desc].filter(Boolean);
-      } else if (module === 7) {
-        texts = [t.mlab_title, t.mlab_desc, ...(t.mlab_labs||[]).map(l=>`${l.title}. ${l.desc}`)].filter(Boolean);
+      const sep = lang==='zh'?'。 ':'. ';
+      let texts=[];
+      if(module===0){
+        texts=[t.m0_title,t.m0_intro,t.m0_why,t.m0_why_desc,...(t.m0_stats||[]).map(s=>`${s.label}: ${s.val}`),...(t.m0_modules||[]).map(m=>`${m.title}. ${m.desc}`)].filter(Boolean);
+      } else if(module>=1&&module<=4){
+        const mk=`m${module}`;
+        texts=[t[`${mk}_title`],...[1,2,3,4].map(n=>t[`${mk}_p${n}`]).filter(Boolean),...(t[`${mk}_cards`]||[]).map(c=>`${c.title}. ${c.desc}`),...(t[`${mk}_terms`]||[]).flatMap(tr=>[tr.front.replace('\n',' '),tr.back])].filter(Boolean);
+      } else if(module===6){
+        texts=[t.m6_title,t.m6_desc].filter(Boolean);
+      } else if(module===7){
+        texts=[t.mlab_title,t.mlab_desc].filter(Boolean);
       } else {
-        texts = [t.analytics_title, t.analytics_desc].filter(Boolean);
+        texts=[t.analytics_title,t.analytics_desc].filter(Boolean);
       }
-      const text = texts.join(sep);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      const voices = window.speechSynthesis.getVoices();
-      if (lang === 'zh') {
-        const v = voices.find(v=>v.lang==='zh-TW'&&v.name.includes('Yating')) || voices.find(v=>v.lang==='zh-TW') || voices.find(v=>v.lang.startsWith('zh'));
-        if (v) utterance.voice = v; utterance.lang = 'zh-TW';
+      const text=texts.join(sep);
+      const utterance=new SpeechSynthesisUtterance(text);
+      utterance.rate=0.95;
+      const voices=window.speechSynthesis.getVoices();
+      if(lang==='zh'){
+        const v=voices.find(v=>v.lang==='zh-TW'&&v.name.includes('Yating'))||voices.find(v=>v.lang==='zh-TW')||voices.find(v=>v.lang.startsWith('zh'));
+        if(v)utterance.voice=v; utterance.lang='zh-TW';
       } else {
-        const v = voices.find(v=>v.lang==='en-GB'&&(v.name.includes('Male')||v.name.includes('Daniel'))) || voices.find(v=>v.lang==='en-GB') || voices.find(v=>v.lang.startsWith('en'));
-        if (v) utterance.voice = v; utterance.lang = 'en-GB';
+        const v=voices.find(v=>v.lang==='en-GB'&&(v.name.includes('Male')||v.name.includes('Daniel')))||voices.find(v=>v.lang==='en-GB')||voices.find(v=>v.lang.startsWith('en'));
+        if(v)utterance.voice=v; utterance.lang='en-GB';
       }
-      utterance.onend = () => setTtsState('idle');
-      utterance.onerror = () => setTtsState('idle');
+      utterance.onend=()=>setTtsState('idle');
+      utterance.onerror=()=>setTtsState('idle');
       window.speechSynthesis.speak(utterance);
       setTtsState('playing');
     }
   };
 
-  // CSV export
+  // CSV export with DOMPurify
   const exportCSV = () => {
-    const BOM = '\uFEFF';
-    const header = `${t.analytics_module},${t.analytics_time}(${t.analytics_sec}),${t.analytics_clicks}(${t.analytics_times}),${t.analytics_correct_ans_total}\n`;
-    const rows = modulesList.map((m,i) => {
-      const qt = analytics.quizTotal[i]; const qa = analytics.quizAnswered[i]; const qc = analytics.quizCorrect[i];
-      return `"${m.title}",${analytics.time[i]},${analytics.clicks[i]},${qt>0?`${qc}/${qa}/${qt}`:t.analytics_no_data}`;
-    }).join('\n');
-    const meta = `\n\n${t.analytics_group},${studentInfo.group}\n${t.analytics_dept},${studentInfo.dept}\n${t.analytics_id},${studentInfo.id}\n${t.analytics_name},${studentInfo.name}`;
-    const blob = new Blob([BOM+header+rows+meta], {type:'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `learning_analytics_${studentInfo.id||'export'}.csv`; a.click();
+    const safeGroup = window.DOMPurify.sanitize(studentInfo.group);
+    const safeDept = window.DOMPurify.sanitize(studentInfo.dept);
+    const safeId = window.DOMPurify.sanitize(studentInfo.id);
+    const safeName = window.DOMPurify.sanitize(studentInfo.name);
+
+    const BOM='\uFEFF';
+    const header='Group,Dept,ID,Name,Module,TimeSpent(sec),Clicks,QuizCorrect,QuizAnswered,QuizTotal\n';
+    let rows='';
+    modulesList.forEach((m,i)=>{
+      rows+=`${safeGroup},${safeDept},${safeId},${safeName},${m.title},${analytics.time[i]},${analytics.clicks[i]},${analytics.quizCorrect[i]},${analytics.quizAnswered[i]},${analytics.quizTotal[i]}\n`;
+    });
+    
+    // 依據規範產生檔名：品牌_主標題_組別_學號_姓名_日期
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const safeTitle = t.title.replace(/ /g, '_');
+    const filename = `${t.brand}_${safeTitle}_${safeGroup}_${safeId}_${safeName}_${dateStr}.csv`;
+
+    const blob=new Blob([BOM+header+rows],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=filename;
+    a.click();
     URL.revokeObjectURL(url);
   };
 
-  const modulesList = [
-    { id:0, icon:'📋', num:0, title: t.m0_nav },
-    { id:1, icon:'🚀', num:1, title: t.m1_nav },
-    { id:2, icon:'💎', num:2, title: t.m2_nav },
-    { id:3, icon:'🚪', num:3, title: t.m3_nav },
-    { id:4, icon:'🌐', num:4, title: t.m4_nav },
-    { id:5, icon:'🏢', num:5, title: t.m5_nav },
-    { id:6, icon:'📚', num:6, title: t.m6_nav, isGlobe: true },
-    { id:7, icon:'⚡', num:7, title: t.mlab_nav, isLab: true },
-    { id:8, icon:'📊', num:8, title: lang==='zh'?'8. 學習歷程':'8. Analytics' }
-  ];
+  // 取得當前在 array 中的 index，解決跳號產生的上一頁/下一頁錯誤
+  const currentIdx = modulesList.findIndex(m => m.id === module);
+  const prevId = currentIdx > 0 ? modulesList[currentIdx - 1].id : module;
+  const nextId = currentIdx < modulesList.length - 1 ? modulesList[currentIdx + 1].id : module;
 
-  const fade = 'animate-fade-in';
-
-  // Render Resources
-  const renderResources = () => {
-    const resources = [
-      { cat: lang==='zh'?'教科書與經典文獻':'Textbooks & Classics', icon:'📖', items:[
-        { label: lang==='zh'?'Grant: Contemporary Strategy Analysis Ch.12':'Grant: Contemporary Strategy Analysis Ch.12', url:'https://www.wiley.com/en-us/Contemporary+Strategy+Analysis-p-9781119815235', desc: lang==='zh'?'本單元核心教材 — 全球策略與跨國企業':'Core textbook for this module — Global Strategy and the MNC' },
-        { label: lang==='zh'?'Porter: Competitive Advantage of Nations':'Porter: Competitive Advantage of Nations', url:'https://hbr.org/1990/03/the-competitive-advantage-of-nations', desc: lang==='zh'?'國家競爭優勢與鑽石模型的原始文獻':'Original work on national competitive advantage and the Diamond model' },
-        { label: lang==='zh'?'Bartlett & Ghoshal: Managing Across Borders':'Bartlett & Ghoshal: Managing Across Borders', url:'https://www.hbs.edu/faculty/Pages/item.aspx?num=139', desc: lang==='zh'?'跨國組織與 Transnational 模型經典著作':'Classic on transnational organization and MNC management' }
-      ]},
-      { cat: lang==='zh'?'線上學習資源':'Online Learning', icon:'🎓', items:[
-        { label:'Harvard Business Review — Global Strategy', url:'https://hbr.org/topic/subject/global-strategy', desc: lang==='zh'?'HBR 全球策略專題文章':'HBR articles on global strategy topics' },
-        { label: lang==='zh'?'Ghemawat: CAGE Distance Framework':'Ghemawat: CAGE Distance Framework', url:'https://hbr.org/2001/09/distance-still-matters-the-hard-reality-of-global-expansion', desc: lang==='zh'?'Ghemawat 的 CAGE 距離架構原始文章':'Ghemawat\'s original CAGE framework article' },
-        { label:'WTO — Trade Statistics', url:'https://www.wto.org/english/res_e/statis_e/statis_e.htm', desc: lang==='zh'?'世界貿易組織國際貿易統計資料':'WTO international trade statistics database' }
-      ]},
-      { cat: lang==='zh'?'案例研究':'Case Studies', icon:'🔍', items:[
-        { label: lang==='zh'?'eBay vs. Alibaba in China':'eBay vs. Alibaba in China', url:'https://hbr.org/product/ebay-in-china/714473-PDF-ENG', desc: lang==='zh'?'eBay 在中國市場的挫敗與 Alibaba 崛起的經典案例':'Classic case on eBay\'s failure and Alibaba\'s rise in China' },
-        { label: lang==='zh'?'McDonald\'s 全球在地化策略':'McDonald\'s Glocalization Strategy', url:'https://www.mcdonalds.com', desc: lang==='zh'?'McDonald\'s 如何平衡全球標準化與在地適應':'How McDonald\'s balances global standardization with local adaptation' }
-      ]}
-    ];
+  // Render learning module
+  const renderLearning = (num) => {
+    const mk=`m${num}`;
     return (
-      <div className="space-y-10 animate-fade-in">
-        <H2 icon={modulesList[6].icon} number={6}>{t.m6_title}</H2>
-        <p className="text-slate-600 dark:text-slate-400">{t.m6_desc}</p>
-        {resources.map((sec,si)=>(
-          <div key={si}>
-            <h3 className="flex items-center gap-2 text-xl font-bold font-serif text-[#004030] dark:text-[#D8C3A5] mb-4"><span>{sec.icon}</span>{sec.cat}</h3>
-            <div className="grid md:grid-cols-2 gap-3">{sec.items.map((l,i)=><LinkCard key={i} {...l}/>)}</div>
-          </div>
-        ))}
-        <div className="bg-[#004030]/5 dark:bg-[#D8C3A5]/5 rounded-xl p-5 border border-[#004030]/20 dark:border-[#D8C3A5]/20">
-          <p className="text-sm text-slate-600 dark:text-slate-400">{lang==='zh'?'⚠️ 以上連結為外部資源，內容可能隨時更新或移除，僅供學術參考之用。':'⚠️ These are external resources that may be updated or removed at any time. For academic reference only.'}</p>
-        </div>
-      </div>
-    );
-  };
-
-  // Render Lab
-  const renderLab = () => (
-    <div className="space-y-8 animate-fade-in">
-      <H2 icon={modulesList[7].icon} number={7}>{t.mlab_title}</H2>
-      <p className="mt-4 text-slate-600 dark:text-slate-400 mb-8">{t.mlab_desc}</p>
-      
-      <IntegrationResponsivenessLab lang={lang}/>
-      
-      <div className="grid md:grid-cols-2 gap-6 items-stretch">
-        <EntryModeComparisonLab lang={lang}/>
-        <DiamondModelLab lang={lang}/>
-      </div>
-      
-      <GlobalValueChainLab lang={lang}/>
-      
-      <div className="grid md:grid-cols-2 gap-6 items-stretch">
-        <InternationalSalesLab lang={lang}/>
-        <CAGEDistanceLab lang={lang}/>
-      </div>
-    </div>
-  );
-
-  // Render Analytics
-  const renderAnalytics = () => {
-    const totalTime = analytics.time.reduce((a,b)=>a+b,0);
-    const totalClicks = analytics.clicks.reduce((a,b)=>a+b,0);
-    const totalCorrect = analytics.quizCorrect.reduce((a,b)=>a+b,0);
-    const totalAnswered = analytics.quizAnswered.reduce((a,b)=>a+b,0);
-    const overallAcc = totalAnswered > 0 ? Math.round(totalCorrect/totalAnswered*100) : 0;
-    const canExport = studentInfo.group && studentInfo.dept && studentInfo.id && studentInfo.name;
-    return (
-      <div className="space-y-8 animate-fade-in">
-        <H2 icon={modulesList[8].icon} number={8}>{t.analytics_title}</H2>
-        <p className="text-slate-600 dark:text-slate-400">{t.analytics_desc}</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[{val:`${Math.floor(totalTime/60)}m ${totalTime%60}s`,label:t.analytics_total_time},{val:totalClicks,label:t.analytics_total_clicks},{val:`${overallAcc}%`,label:t.analytics_overall_acc}].map((s,i)=>(
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-5 text-center shadow-sm border border-slate-200 dark:border-slate-700">
-              <div className="text-2xl font-black font-serif text-[#004030] dark:text-[#D8C3A5] mb-1">{s.val}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{s.label}</div>
-            </div>
-          ))}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead><tr className="bg-[#004030] text-white dark:bg-slate-700">
-              <th className="p-3 text-left">{t.analytics_module}</th><th className="p-3">{t.analytics_time}</th><th className="p-3">{t.analytics_clicks}</th><th className="p-3">{t.analytics_correct_ans_total}</th>
-            </tr></thead>
-            <tbody>{modulesList.map((m,i)=>(
-              <tr key={i} className="border-b border-slate-200 dark:border-slate-700 even:bg-slate-50 dark:even:bg-slate-800/50">
-                <td className="p-3 font-medium">{m.title}</td>
-                <td className="p-3 text-center">{analytics.time[i]}{t.analytics_sec}</td>
-                <td className="p-3 text-center">{analytics.clicks[i]}{t.analytics_times}</td>
-                <td className="p-3 text-center">{analytics.quizTotal[i]>0?`${analytics.quizCorrect[i]}/${analytics.quizAnswered[i]}/${analytics.quizTotal[i]}`:t.analytics_no_data}</td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-          <h3 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{t.analytics_form_title}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1 block">{t.analytics_group}</label>
-              <select value={studentInfo.group} onChange={e=>setStudentInfo(s=>({...s,group:e.target.value}))} className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200">
-                <option value="">--</option>{t.group_options.map(g=><option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div><label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1 block">{t.analytics_dept}</label><input placeholder={t.analytics_dept_ph} value={studentInfo.dept} onChange={e=>setStudentInfo(s=>({...s,dept:e.target.value}))} className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"/></div>
-            <div><label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1 block">{t.analytics_id}</label><input placeholder={t.analytics_id_ph} value={studentInfo.id} onChange={e=>setStudentInfo(s=>({...s,id:e.target.value}))} className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"/></div>
-            <div><label className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1 block">{t.analytics_name}</label><input placeholder={t.analytics_name_ph} value={studentInfo.name} onChange={e=>setStudentInfo(s=>({...s,name:e.target.value}))} className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"/></div>
-          </div>
-          <div className="mt-4">
-            <button onClick={exportCSV} disabled={!canExport} className="px-6 py-2 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-bold rounded-lg disabled:opacity-40 transition-all">{t.analytics_export_csv}</button>
-            {!canExport && <p className="text-xs text-slate-400 mt-2">{t.analytics_fill_required}</p>}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Render module content
-  const renderModuleContent = (modNum) => {
-    const mk = `m${modNum}`;
-    return (
-      <div className={`space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300 ${fade}`}>
-        <H2 icon={modulesList[modNum].icon} number={modNum}>{t[`${mk}_title`]}</H2>
+      <div className="space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300 animate-fade-in">
+        <H2 icon={modulesList.find(m=>m.id===num)?.icon} number={num}>{t[`${mk}_title`]}</H2>
         <p>{t[`${mk}_p1`]}</p>
-        <p className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg italic font-serif text-base">{t[`${mk}_p2`]}</p>
-        <p>{t[`${mk}_p3`]}</p>
+        {t[`${mk}_p2`] && <p className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg italic font-serif text-base">{t[`${mk}_p2`]}</p>}
+        {t[`${mk}_p3`] && <p>{t[`${mk}_p3`]}</p>}
         {t[`${mk}_p4`] && <p>{t[`${mk}_p4`]}</p>}
         {t[`${mk}_cards`] && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -981,10 +836,10 @@ function App() {
             ))}
           </div>
         )}
-        <div className="mt-8">
+        <div className="mt-8 select-none">
           <h3 className="text-lg font-bold uppercase tracking-wider text-slate-500 mb-4">{t.key_terms}</h3>
           <div key={`terms-${module}`} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {t[`${mk}_terms`].map((term,i) => <FlipCard key={i} front={term.front} back={term.back} t={t}/>)}
+            {t[`${mk}_terms`].map((term,i)=><FlipCard key={i} front={term.front} back={term.back} t={t}/>)}
           </div>
         </div>
         <ModuleQuiz key={`quiz-${module}`} questions={t[`${mk}_q`]} t={t} moduleId={module} onQuizSubmit={handleQuizSubmit}/>
@@ -992,21 +847,138 @@ function App() {
     );
   };
 
-  // Main render content
+  // Render Resources
+  const renderResources = () => {
+    const links = [
+      {label:lang==='zh'?'Pankaj Ghemawat: Distance Still Matters':'Distance Still Matters (HBR)',url:'https://hbr.org/2001/09/distance-still-matters-the-hard-reality-of-global-expansion',desc:lang==='zh'?'Ghemawat 提出 CAGE 距離架構的經典 HBR 文章。':'The classic HBR article introducing the CAGE distance framework.'},
+      {label:lang==='zh'?'Michael Porter: 國家競爭優勢':'The Competitive Advantage of Nations',url:'https://hbr.org/1990/03/the-competitive-advantage-of-nations',desc:lang==='zh'?'Porter 鑽石模型的原文文獻。':'Porter\'s original article on the National Diamond Model.'},
+      {label:lang==='zh'?'Bartlett & Ghoshal: 跨國型策略':'Managing Across Borders',url:'https://hbr.org/1989/08/managing-across-borders-the-transnational-solution',desc:lang==='zh'?'探討 I-R 矩陣與跨國型組織的經典著作。':'Classic work discussing the I-R matrix and transnational organizations.'}
+    ];
+    return (
+      <div className="space-y-10 animate-fade-in select-none">
+        <H2 icon="🔗" number={6}>{t.m6_title}</H2>
+        <p className="text-slate-600 dark:text-slate-400">{t.m6_desc}</p>
+        <div className="grid md:grid-cols-2 gap-3">{links.map((l,i)=><LinkCard key={i} {...l}/>)}</div>
+        <div className="bg-[#004030]/5 dark:bg-[#D8C3A5]/5 rounded-xl p-5 border border-[#004030]/20 dark:border-[#D8C3A5]/20">
+          <p className="text-sm text-slate-600 dark:text-slate-400">⚠️ {lang==='zh'?'以上連結為外部資源，內容可能隨時變更。請自行確認資訊的時效性與正確性。':'Links are external resources that may change. Please verify timeliness and accuracy independently.'}</p>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Lab
+  const renderLab = () => (
+    <div className="space-y-8 animate-fade-in select-none">
+      <H2 icon="🧪" number={7}>{t.mlab_title}</H2>
+      <p className="text-slate-600 dark:text-slate-400">{t.mlab_desc}</p>
+      <div className="grid md:grid-cols-2 gap-6">
+        <CAGELab lang={lang}/>
+        <EntryModeLab lang={lang}/>
+      </div>
+      <IRFrameworkLab lang={lang}/>
+    </div>
+  );
+
+  // Render Analytics
+  const renderAnalytics = () => {
+    const totalTime = analytics.time.reduce((s,v)=>s+v,0);
+    const totalClicks = analytics.clicks.reduce((s,v)=>s+v,0);
+    const totalCorrect = analytics.quizCorrect.reduce((s,v)=>s+v,0);
+    const totalAnswered = analytics.quizAnswered.reduce((s,v)=>s+v,0);
+    const overallAcc = totalAnswered>0?Math.round(totalCorrect/totalAnswered*100):0;
+    const canExport = studentInfo.group&&studentInfo.dept&&studentInfo.id&&studentInfo.name;
+    return (
+      <div className="space-y-8 animate-fade-in select-none">
+        <H2 icon="📊" number={8}>{t.analytics_title}</H2>
+        <p className="text-slate-600 dark:text-slate-400">{t.analytics_desc}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-5 text-center shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="text-3xl font-black font-serif text-[#004030] dark:text-[#D8C3A5]">{totalTime}{t.analytics_sec}</div>
+            <div className="text-xs text-slate-500 mt-1">{t.analytics_total_time}</div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-5 text-center shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="text-3xl font-black font-serif text-[#004030] dark:text-[#D8C3A5]">{totalClicks}{t.analytics_times}</div>
+            <div className="text-xs text-slate-500 mt-1">{t.analytics_total_clicks}</div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-5 text-center shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="text-3xl font-black font-serif text-[#004030] dark:text-[#D8C3A5]">{overallAcc}%</div>
+            <div className="text-xs text-slate-500 mt-1">{t.analytics_overall_acc}</div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-[#004030] text-white">
+                <th className="px-3 py-2 text-left">{t.analytics_module}</th>
+                <th className="px-3 py-2 text-center">{t.analytics_time}</th>
+                <th className="px-3 py-2 text-center">{t.analytics_clicks}</th>
+                <th className="px-3 py-2 text-center">{t.analytics_correct_ans_total}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modulesList.map((m,i)=>(
+                <tr key={i} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">{m.title}</td>
+                  <td className="px-3 py-2 text-center">{analytics.time[i]}{t.analytics_sec}</td>
+                  <td className="px-3 py-2 text-center">{analytics.clicks[i]}{t.analytics_times}</td>
+                  <td className="px-3 py-2 text-center">{analytics.quizTotal[i]>0?`${analytics.quizCorrect[i]} / ${analytics.quizAnswered[i]} / ${analytics.quizTotal[i]}`:t.analytics_no_data}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+          <h3 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4">{t.analytics_form_title}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.analytics_group}</label>
+              <select value={studentInfo.group} onChange={e=>setStudentInfo(s=>({...s,group:e.target.value}))}
+                className="w-full mt-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                <option value="">--</option>
+                {t.group_options.map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.analytics_dept}</label>
+              <input placeholder={t.analytics_dept_ph} value={studentInfo.dept} onChange={e=>setStudentInfo(s=>({...s,dept:e.target.value}))}
+                className="w-full mt-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"/>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.analytics_id}</label>
+              <input placeholder={t.analytics_id_ph} value={studentInfo.id} onChange={e=>setStudentInfo(s=>({...s,id:e.target.value}))}
+                className="w-full mt-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"/>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.analytics_name}</label>
+              <input placeholder={t.analytics_name_ph} value={studentInfo.name} onChange={e=>setStudentInfo(s=>({...s,name:e.target.value}))}
+                className="w-full mt-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"/>
+            </div>
+          </div>
+          <div className="mt-4">
+            <button onClick={exportCSV} disabled={!canExport} className="px-6 py-2 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-bold rounded-lg disabled:opacity-40 transition-colors">
+              {canExport?t.analytics_export_csv:t.analytics_fill_required}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render content
   const renderContent = () => {
-    switch(module) {
+    switch(module){
       case 0: return (
-        <div className={`space-y-8 text-lg leading-relaxed text-slate-700 dark:text-slate-300 ${fade}`}>
-          <div className="bg-[#004030] dark:bg-slate-800 rounded-2xl p-8 text-white">
+        <div className="space-y-8 text-lg leading-relaxed text-slate-700 dark:text-slate-300 animate-fade-in">
+          <div className="bg-[#004030] dark:bg-slate-800 rounded-2xl p-6 sm:p-8 text-white select-none">
             <p className="text-xs font-bold uppercase tracking-widest text-[#D8C3A5] mb-3">{lang==='zh'?'課程簡介':'Course Introduction'}</p>
-            <h2 className="text-3xl md:text-4xl font-serif font-black text-white mb-4">{t.m0_title}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black text-white mb-4">{t.m0_title}</h2>
             <p className="text-[#D8C3A5]/90 text-base leading-relaxed">{t.m0_intro}</p>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border-l-4 border-[#D8C3A5] shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border-l-4 border-[#D8C3A5] shadow-sm select-none">
             <h3 className="text-xl font-bold font-serif text-[#004030] dark:text-[#D8C3A5] mb-3">{t.m0_why}</h3>
-            <p className="text-base">{t.m0_why_desc}</p>
+            <p className="text-base text-slate-600 dark:text-slate-400">{t.m0_why_desc}</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
             {t.m0_stats.map((s,i)=>(
               <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-5 text-center shadow-sm border border-slate-200 dark:border-slate-700">
                 <div className="text-2xl md:text-3xl font-black font-serif text-[#004030] dark:text-[#D8C3A5] mb-1">{s.val}</div>
@@ -1014,27 +986,31 @@ function App() {
               </div>
             ))}
           </div>
-          <div>
+          <div className="select-none">
             <h3 className="text-lg font-bold uppercase tracking-wider text-slate-500 mb-4">{lang==='zh'?'課程模組':'Course Modules'}</h3>
             <div className="space-y-3">
               {t.m0_modules.map((m,i)=>(
-                <button key={i} onClick={()=>switchModule(i+1)} className="w-full flex items-center gap-5 bg-white dark:bg-slate-800 rounded-xl px-6 py-4 shadow-sm border border-slate-200 dark:border-slate-700 hover:border-[#004030] dark:hover:border-[#D8C3A5] hover:shadow-md transition-all group text-left">
+                <button key={i} onClick={()=>switchModule(i+1)}
+                  className="w-full flex items-center gap-5 bg-white dark:bg-slate-800 rounded-xl px-6 py-4 border border-slate-200 dark:border-slate-700 hover:border-[#004030] dark:hover:border-[#D8C3A5] hover:shadow-md transition-all group text-left">
                   <div className="text-3xl font-black font-serif text-[#D8C3A5] w-10 shrink-0">{m.num}</div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-bold font-serif text-[#004030] dark:text-[#D8C3A5] mb-1">{m.title}</div>
-                    <div className="text-sm text-slate-500">{m.desc}</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">{m.desc}</div>
                   </div>
-                  <IconChevronRight size={20} className="text-slate-300 group-hover:text-[#004030] dark:group-hover:text-[#D8C3A5] transition-colors"/>
+                  <IconChevronRight size={20} className="text-slate-300 group-hover:text-[#004030] dark:group-hover:text-[#D8C3A5] shrink-0 transition-colors"/>
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex justify-end">
-            <button onClick={()=>switchModule(1)} className="px-8 py-3 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-serif font-bold hover:bg-[#002b20] dark:hover:bg-white rounded-lg shadow-md transition-all">{t.m0_start}</button>
+          <div className="flex justify-end select-none">
+            <button onClick={()=>switchModule(1)}
+              className="px-8 py-3 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-serif font-bold hover:bg-[#002b20] dark:hover:bg-white uppercase text-sm tracking-wider shadow-md rounded-lg transition-all">
+              {t.m0_start}
+            </button>
           </div>
         </div>
       );
-      case 1: case 2: case 3: case 4: case 5: return renderModuleContent(module);
+      case 1: case 2: case 3: case 4: return renderLearning(module);
       case 6: return renderResources();
       case 7: return renderLab();
       case 8: return renderAnalytics();
@@ -1043,11 +1019,11 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] dark:bg-[#121212] font-sans flex flex-col overflow-x-hidden pt-16">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-[#004030] dark:bg-slate-900 text-white z-50 shadow-lg border-b border-[#D8C3A5]/30">
+    <div className={`min-h-screen bg-[#f4f4f4] dark:bg-[#121212] font-sans flex flex-col overflow-x-hidden pt-16 selection:bg-[#004030] selection:text-white dark:selection:bg-[#D8C3A5] dark:selection:text-[#004030]`}>
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-[#004030] dark:bg-slate-900 text-white z-50 shadow-lg border-b border-[#D8C3A5]/30 select-none">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Hamburger */}
             <div className="relative" ref={menuRef}>
               <button onClick={()=>setMenuOpen(!menuOpen)} className="p-2 hover:bg-white/10 rounded-lg transition-colors" aria-label="Toggle menu">
@@ -1058,10 +1034,13 @@ function App() {
                   <div className="bg-[#004030]/5 dark:bg-[#D8C3A5]/5 px-4 py-2 border-b border-slate-200 dark:border-slate-700">
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t.nav_modules}</p>
                   </div>
-                  {modulesList.map(m => (
+                  {modulesList.map(m=>(
                     <button key={m.id} onClick={()=>{switchModule(m.id);setMenuOpen(false);}}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors text-left ${module===m.id?'bg-[#004030] text-white dark:bg-[#D8C3A5]/20 dark:text-[#D8C3A5] font-bold':'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
-                      <span className={module===m.id?'text-[#D8C3A5]':'opacity-50'}>{m.isGlobe?<IconGlobe size={16}/>:m.isLab?<IconZapLab size={16}/>:m.icon}</span>
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors text-left
+                        ${module===m.id
+                          ?'bg-[#004030] text-white dark:bg-[#D8C3A5]/20 dark:text-[#D8C3A5] font-bold'
+                          :'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                      <span className={module===m.id?'text-[#D8C3A5]':'opacity-50'}>{m.icon}</span>
                       <span className="truncate">{m.title}</span>
                     </button>
                   ))}
@@ -1071,31 +1050,44 @@ function App() {
             {/* Brand */}
             <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} className="flex items-center gap-2 text-white hover:text-[#D8C3A5] transition-colors">
               <span className="font-serif font-black text-[#D8C3A5] text-lg tracking-widest">{t.brand}</span>
-              <span className="font-serif font-bold text-white text-sm hidden sm:inline">{t.title}</span>
+              <span className="font-serif font-bold text-white text-sm hidden sm:inline truncate max-w-[200px]">{t.title}</span>
             </button>
           </div>
           {/* Controls */}
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="flex items-center gap-1 mr-1 sm:mr-2">
-              {ttsState==='idle'&&<button onClick={()=>handleTTS('play')} className="p-1.5 hover:bg-white/10 rounded-lg" title={t.audio_read}><IconPlay size={16}/></button>}
-              {ttsState==='playing'&&<><button onClick={()=>handleTTS('pause')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconPause size={16}/></button><button onClick={()=>handleTTS('stop')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconSquare size={16}/></button></>}
-              {ttsState==='paused'&&<><button onClick={()=>handleTTS('play')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconPlay size={16}/></button><button onClick={()=>handleTTS('stop')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconSquare size={16}/></button></>}
+              {ttsState==='idle' && <button onClick={()=>handleTTS('play')} className="p-1.5 hover:bg-white/10 rounded-lg" title={t.audio_read}><IconPlay size={16}/></button>}
+              {ttsState==='playing' && <>
+                <button onClick={()=>handleTTS('pause')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconPause size={16}/></button>
+                <button onClick={()=>handleTTS('stop')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconSquare size={16}/></button>
+              </>}
+              {ttsState==='paused' && <>
+                <button onClick={()=>handleTTS('play')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconPlay size={16}/></button>
+                <button onClick={()=>handleTTS('stop')} className="p-1.5 hover:bg-white/10 rounded-lg"><IconSquare size={16}/></button>
+              </>}
             </div>
-            <button onClick={()=>{setLang(lang==='zh'?'en':'zh');if('speechSynthesis' in window){window.speechSynthesis.cancel();setTtsState('idle');}}} className="px-2 py-1 text-xs sm:text-sm font-bold bg-white/10 hover:bg-white/20 rounded-lg transition-colors">{lang==='zh'?'EN':'中'}</button>
-            <button onClick={()=>setIsDark(!isDark)} className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors">{isDark?<IconSun size={16}/>:<IconMoon size={16}/>}</button>
+            <button onClick={()=>setLang(l=>l==='zh'?'en':'zh')} className="px-2 py-1 text-xs sm:text-sm font-bold border border-[#D8C3A5]/50 rounded-lg hover:bg-white/10 transition-colors">
+              {lang==='zh'?'EN':'中'}
+            </button>
+            <button onClick={()=>setIsDark(!isDark)} className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors">
+              {isDark?<IconSun size={18}/>:<IconMoon size={18}/>}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Body */}
+      {/* BODY */}
       <div className="flex-1 flex max-w-7xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-6 gap-6">
         {/* Sidebar */}
-        <aside className="hidden md:block w-64 shrink-0">
+        <aside className="hidden md:block w-64 shrink-0 select-none">
           <div className="sticky top-20 space-y-1">
             {modulesList.map(m=>(
               <button key={m.id} onClick={()=>switchModule(m.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all text-left ${module===m.id?'bg-[#004030] text-white dark:bg-[#D8C3A5]/20 dark:text-[#D8C3A5] font-bold shadow-sm':'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm'}`}>
-                <span className={`shrink-0 ${module===m.id?'text-[#D8C3A5]':'opacity-50'}`}>{m.isGlobe?<IconGlobe size={16}/>:m.isLab?<IconZapLab size={16}/>:m.icon}</span>
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-left
+                  ${module===m.id
+                    ?'bg-[#004030] text-white dark:bg-[#D8C3A5]/20 dark:text-[#D8C3A5] font-bold shadow-sm'
+                    :'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-[#004030] dark:hover:text-[#D8C3A5]'}`}>
+                <span className={module===m.id?'text-[#D8C3A5]':'opacity-60'}>{m.icon}</span>
                 <span className="truncate">{m.title}</span>
               </button>
             ))}
@@ -1106,30 +1098,37 @@ function App() {
         <main className="flex-1 min-w-0" onClick={handleContentClick}>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-6 md:p-8">
             {renderContent()}
-            {/* Bottom nav */}
-            <div className="mt-12 flex justify-between items-center pt-8 border-t border-slate-300 dark:border-slate-700">
-              <button onClick={()=>switchModule(Math.max(0,module-1))} disabled={module===0}
-                className="px-6 py-3 font-serif font-bold text-slate-500 hover:text-[#004030] dark:hover:text-[#D8C3A5] disabled:opacity-0 uppercase text-sm tracking-wider flex items-center transition-colors">
-                ← {t.nav_prev}
-              </button>
-              <button onClick={()=>switchModule(Math.min(TOTAL-1,module+1))} disabled={module===TOTAL-1}
-                className="px-8 py-3 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-serif font-bold hover:bg-[#002b20] dark:hover:bg-white disabled:opacity-0 uppercase text-sm tracking-wider shadow-md flex items-center transition-all">
-                {t.nav_next} <IconArrowRight size={16} className="ml-2"/>
-              </button>
-            </div>
+          </div>
+          {/* Bottom nav */}
+          <div className="mt-6 flex justify-between items-center pt-6 border-t border-slate-300 dark:border-slate-700 select-none">
+            <button onClick={()=>switchModule(prevId)} disabled={currentIdx === 0}
+              className="px-4 sm:px-6 py-3 font-serif font-bold text-slate-500 hover:text-[#004030] dark:hover:text-[#D8C3A5] disabled:opacity-0 uppercase text-sm tracking-wider flex items-center transition-colors">
+              ← {t.nav_prev}
+            </button>
+            <button onClick={()=>switchModule(nextId)} disabled={currentIdx === modulesList.length - 1}
+              className="px-6 sm:px-8 py-3 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] font-serif font-bold hover:bg-[#002b20] dark:hover:bg-white disabled:opacity-0 uppercase text-sm tracking-wider shadow-md flex items-center rounded-lg transition-all">
+              {t.nav_next} <IconArrowRight size={16} className="ml-2"/>
+            </button>
           </div>
         </main>
       </div>
 
-      {/* Footer */}
-      <footer className="h-8 bg-[#004030] flex items-center justify-between px-4 shrink-0">
+      {/* FOOTER */}
+      <footer className="h-8 bg-[#004030] flex items-center justify-between px-4 shrink-0 select-none">
         <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs truncate">{t.date} · {t.copyright}</span>
         <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs flex items-center gap-3 shrink-0">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 hidden sm:flex">
             Architect:&nbsp;
-            <a href={t.architect_url} target="_blank" rel="noopener noreferrer" className="text-[#D8C3A5] hover:text-white underline underline-offset-2 transition-colors">Prof. Shihmin Lo</a>
+            <a href="https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+              target="_blank" rel="noopener noreferrer"
+              className="text-[#D8C3A5] hover:text-white underline underline-offset-2 transition-colors">
+              Prof. Shihmin Lo
+            </a>
           </span>
-          <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} className="text-[#D8C3A5] hover:text-white transition-colors font-bold cursor-pointer">Top ↑</button>
+          <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}
+            className="text-[#D8C3A5] hover:text-white transition-colors font-bold cursor-pointer border-l border-slate-600 pl-3">
+            Top ↑
+          </button>
         </span>
       </footer>
     </div>
